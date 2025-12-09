@@ -1,0 +1,37 @@
+; ===== FULL ISA TEST =====
+
+NOP
+SETC
+
+NOT R1
+INC R2
+
+OUT R3
+IN  R4
+
+MOV  R1, R5
+SWAP R2, R6
+
+ADD R0, R1, R2
+SUB R3, R4, R5
+AND R6, R6, R7
+
+IADD R7, R1, 10
+LDM  R4, 99
+LDD  R2, R1, 12
+STD  R5, R3, 20
+
+JMP  40
+JZ   44
+JN   48
+JC   52
+CALL 60
+
+INT  3
+
+PUSH R7
+POP  R0
+
+RTI
+RET
+HLT
