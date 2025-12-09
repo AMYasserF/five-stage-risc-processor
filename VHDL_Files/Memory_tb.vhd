@@ -1,0 +1,68 @@
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.numeric_std.all;
+
+entity Memory_tb is
+end entity;
+
+architecture a_Memory_tb of Memory_tb is
+  
+  component Memory is
+  port(
+   clk : in std_logic;
+	 mem_read : in std_logic;
+	 mem_write : in std_logic;
+	 hlt : in std_logic;
+	 address : in std_logic_vector(17 downto 0);
+	 write_data : in std_logic_vector(31 downto 0);
+	 read_data : out std_logic_vector(31 downto 0)
+	 );
+  end component;
+  
+  signal clk_t, mem_read_t, mem_write_t, hlt_t : std_logic := '0';
+  signal address_t : std_logic_vector(17 downto 0) := (others => '0');
+  signal write_data_t, read_data_t : std_logic_vector(31 downto 0) := (others => '0');
+  
+begin
+  
+  mem: Memory port map(
+    clk => clk_t,
+    mem_read => mem_read_t,
+    mem_write => mem_write_t,
+    hlt => hlt_t,
+    address => address_t,
+    write_data => write_data_t,
+    read_data => read_data_t
+  );
+  
+  process
+  begin
+    clk_t <= '0';
+    wait for 25 ns;
+    clk_t <= '1';
+    wait for 25 ns;
+  end process;
+  
+  process
+  begin
+    address_t <= std_logic_vector(to_unsigned(100 , 18));
+    mem_read_t <= '1';
+    mem_write_t <= '0';
+    hlt_t <= '0';
+    write_data_t <= (others => '0');
+    wait for 50 ns;
+    address_t <= std_logic_vector(to_unsigned(250 , 18));
+    mem_write_t <= '1';
+    mem_read_t <= '0';
+    write_data_t <= std_logic_vector(to_unsigned(410 , 32));
+    wait for 50 ns;
+    address_t <= std_logic_vector(to_unsigned(250 , 18));
+    mem_write_t <= '0';
+    mem_read_t <= '1';
+    wait for 50 ns;
+    address_t <= std_logic_vector(to_unsigned(300 , 18));
+    hlt_t <= '1';
+    wait for 50 ns; 
+  end process;
+end a_Memory_tb;
+  
