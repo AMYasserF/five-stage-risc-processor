@@ -106,12 +106,11 @@ def assemble(lines):
         # ---------------- J TYPE ----------------
         elif ins in J_TYPE_FUNCS:
 
-            op=build_opcode(1,0b10,J_TYPE_FUNCS[ins])
-            
             if ins=="RET":
+                op=build_opcode(0,0b10,J_TYPE_FUNCS[ins])  # hasImm=0 for RET
                 mem.append(inst_word(op))
-                mem.append(0)  # RET has no target address, use 0
             else:
+                op=build_opcode(1,0b10,J_TYPE_FUNCS[ins])  # hasImm=1 for others
                 target=int(t[1],0)
                 mem.append(inst_word(op))
                 mem.append(target & 0xffffffff)
