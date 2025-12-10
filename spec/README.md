@@ -55,17 +55,17 @@ Include a 32-bit target address (second word).
 | `JN target`   | 0011   | Jump if negative flag set |
 | `JC target`   | 0100   | Jump if carry flag set    |
 | `CALL target` | 0101   | Call subroutine           |
+| `RET`         | 0110   | Return from subroutine    |
 
 ### System/Stack Instructions
 
-| Instruction | Opcode | Description            |
-| ----------- | ------ | ---------------------- |
-| `RET`       | 0001   | Return from subroutine |
-| `PUSH Rs1`  | 0010   | Push Rs1 onto stack    |
-| `POP Rd`    | 0011   | Pop from stack to Rd   |
-| `INT imm`   | 0100   | Software interrupt     |
-| `RTI`       | 0101   | Return from interrupt  |
-| `HLT`       | 0110   | Halt processor         |
+| Instruction | Opcode | Description           |
+| ----------- | ------ | --------------------- |
+| `PUSH Rs1`  | 0001   | Push Rs1 onto stack   |
+| `POP Rd`    | 0010   | Pop from stack to Rd  |
+| `INT imm`   | 0011   | Software interrupt    |
+| `RTI`       | 0100   | Return from interrupt |
+| `HLT`       | 0101   | Halt processor        |
 
 ## Instruction Format
 

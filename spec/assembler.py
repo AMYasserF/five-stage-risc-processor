@@ -17,13 +17,13 @@ I_TYPE_FUNCS = {
 
 # ------------ J TYPE -----------------
 J_TYPE_FUNCS = {
-    "JMP":0b0001,"JZ":0b0010,"JN":0b0011,"JC":0b0100,"CALL":0b0101
+    "JMP":0b0001,"JZ":0b0010,"JN":0b0011,"JC":0b0100,"CALL":0b0101,"RET":0b0110
 }
 
 # ------------ SYSTEM STACK ----------
 SYS_FUNCS = {
-    "RET":0b0001,"PUSH":0b0010,"POP":0b0011,
-    "INT":0b0100,"RTI":0b0101,"HLT":0b0110
+    "PUSH":0b0001,"POP":0b0010,
+    "INT":0b0011,"RTI":0b0100,"HLT":0b0101
 }
 
 # ------------------------------------
@@ -107,10 +107,14 @@ def assemble(lines):
         elif ins in J_TYPE_FUNCS:
 
             op=build_opcode(1,0b10,J_TYPE_FUNCS[ins])
-            target=int(t[1],0)
-
-            mem.append(inst_word(op))
-            mem.append(target & 0xffffffff)
+            
+            if ins=="RET":
+                mem.append(inst_word(op))
+                mem.append(0)  # RET has no target address, use 0
+            else:
+                target=int(t[1],0)
+                mem.append(inst_word(op))
+                mem.append(target & 0xffffffff)
 
         # ---------------- SYSTEM STACK ----------
         elif ins in SYS_FUNCS:
@@ -118,7 +122,7 @@ def assemble(lines):
             needImm = ins=="INT"
             op=build_opcode(1 if needImm else 0,0b11,SYS_FUNCS[ins])
 
-            if ins=="RET" or ins=="RTI" or ins=="HLT":
+            if ins=="RTI" or ins=="HLT":
                 rd=rs1=rs2=0
 
             elif ins=="PUSH":
