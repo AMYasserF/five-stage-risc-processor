@@ -28,7 +28,8 @@ architecture a_Write_Back of Write_Back is
 begin
   Swap_Phase_Next <= Is_Swap and not Swap_Phase;
   WriteBackMuxSelect <= Is_Input & MemToReg;
-  Output_Port_Data <= R_data2 when Is_Output='1';
+  Output_Port_Data <= R_data2 when Is_Output='1'
+  else (others => '0');
   
   with Swap_Phase select
     Write_Back_Register <= 
