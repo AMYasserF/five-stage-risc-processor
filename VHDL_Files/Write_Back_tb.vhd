@@ -48,4 +48,42 @@ begin
     write_back_register => write_back_register_t,
     swap_phase_next => swap_phase_next_t
   );
+  
+  process
+  begin
+    
+    --Testing write back from ALU result
+    MemToReg_t <= '0'; Is_Input_t <= '0';
+    Is_Output_t <= '0'; Is_Swap_t <= '0'; Swap_Phase_t <= '0';
+    rdst_t <= std_logic_vector(to_unsigned(4 , 3));
+    rsrc1_t <= std_logic_vector(to_unsigned(7 , 3));
+    r_data2_t <= std_logic_vector(to_unsigned(50 , 32));
+    alu_result_t <= std_logic_vector(to_unsigned(75 , 32));
+    mem_result_t <= std_logic_vector(to_unsigned(100 , 32));
+    input_port_data_t <= std_logic_vector(to_unsigned(125 , 32));
+    wait for 50 ns;
+    
+    --Testing write back from memory result
+    MemToReg_t <= '1';
+    wait for 50 ns;
+    
+    --Testing write back from input port
+    MemToReg_t <= '0';
+    Is_Input_t <= '1';
+    wait for 50 ns;
+    
+    --Simulating swapping
+    Is_Input_t <= '0';
+    Is_Swap_t <= '1';
+    wait for 50 ns;
+    Swap_Phase_t <= '1';
+    wait for 50 ns;
+    
+    --Testing writing to output port
+    Is_Swap_t <= '0';
+    Swap_Phase_t <= '0';
+    Is_Output_t <= '1';
+    wait for 50 ns;
+        
+  end process;
 end a_Write_Back_tb;
