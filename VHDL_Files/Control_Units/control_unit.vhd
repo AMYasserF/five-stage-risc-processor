@@ -18,6 +18,7 @@ entity control_unit is
            is_call               : out STD_LOGIC;                 -- Output: IsCall signal
            hlt                   : out STD_LOGIC;                 -- Output: Halt signal
            is_int                : out STD_LOGIC;                 -- Output: IsInt signal
+           is_in                 : out STD_lOGIC;                 -- Output: in in signal
            is_pop                : out STD_LOGIC;                 -- Output: IsPop signal
            is_push               : out STD_LOGIC;                 -- Output: IsPush signal
            int_phase             : out STD_LOGIC;                 -- Output: IntPhase signal
@@ -58,7 +59,7 @@ begin
         branchC               <= '0';
         branchN               <= '0';
         unconditional_branch  <= '0';
-
+        is_in                 <= '0';
         -- If previous_is_immediate is '1', set all control signals to '0' and ignore opcode
         if previous_is_immediate = '1' then
             -- All control signals are set to '0' by default (already done)
@@ -92,6 +93,7 @@ begin
                             out_enable <= '1';
                             reg_write <= '0';
                         when "0101" =>  -- IN
+                            is_in <= '1';
                             alu_op <= "0011";  -- PassB (from input port)
                             reg_write <= '1';
                         when "0110" =>  -- MOV
