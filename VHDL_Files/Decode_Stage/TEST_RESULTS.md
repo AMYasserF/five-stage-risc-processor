@@ -1,18 +1,22 @@
 # Decode Stage Test Results
 
 ## Test Execution Summary
+
 **Date:** December 14, 2025  
 **Tool:** ModelSim 10.5b  
 **Status:** ✅ **ALL TESTS PASSED**
 
 ## Compilation Results
+
 All files compiled successfully with 0 errors:
+
 - ✅ `register_file.vhd` - 0 errors, 0 warnings
 - ✅ `control_unit.vhd` - 0 errors, 0 warnings
 - ✅ `decode_stage.vhd` - 0 errors, 0 warnings
 - ✅ `decode_stage_tb.vhd` - 0 errors, 0 warnings
 
 ## Simulation Results
+
 **Total Tests:** 11  
 **Passed:** 11  
 **Failed:** 0  
@@ -22,11 +26,13 @@ All files compiled successfully with 0 errors:
 ### Test Cases
 
 #### Test 1: Reset ✅
+
 - **Purpose:** Verify reset functionality
 - **Status:** PASSED
 - **Notes:** Metavalue warnings during time=0 are expected for uninitialized signals
 
 #### Test 2: Write to R1 and R2 ✅
+
 - **Purpose:** Verify register file write operations
 - **Actions:**
   - Write 100 (0x64) to R1
@@ -35,6 +41,7 @@ All files compiled successfully with 0 errors:
 - **Verification:** Register file successfully stores values
 
 #### Test 3: ADD R3, R1, R2 ✅
+
 - **Purpose:** Test R-Type instruction decoding (ADD)
 - **Instruction:** `0001000_011_001_010_0000000000000000`
 - **Expected Behavior:**
@@ -51,6 +58,7 @@ All files compiled successfully with 0 errors:
 - **Verification:** All control signals correct, register reads successful
 
 #### Test 4: LDM R4, 99 ✅
+
 - **Purpose:** Test I-Type instruction decoding (Load Immediate)
 - **Instruction:** `1010010_100_000_000_0000000000000000`
 - **Expected Behavior:**
@@ -62,6 +70,7 @@ All files compiled successfully with 0 errors:
 - **Verification:** Immediate instruction correctly identified
 
 #### Test 5: JZ (Jump if Zero) ✅
+
 - **Purpose:** Test J-Type conditional branch instruction
 - **Instruction:** `0100010_000_000_000_0000000000000000`
 - **Expected Behavior:**
@@ -72,6 +81,7 @@ All files compiled successfully with 0 errors:
 - **Verification:** Branch control signals correctly generated
 
 #### Test 6: PUSH R7 ✅
+
 - **Purpose:** Test System-Type instruction (Stack operation)
 - **Instruction:** `0111001_000_111_000_0000000000000000`
 - **Expected Behavior:**
@@ -83,6 +93,7 @@ All files compiled successfully with 0 errors:
 - **Verification:** Stack operation signals correct
 
 #### Test 7: HLT (Halt) ✅
+
 - **Purpose:** Test halt instruction
 - **Instruction:** `0111110_000_000_000_0000000000000000`
 - **Expected Behavior:**
@@ -92,6 +103,7 @@ All files compiled successfully with 0 errors:
 - **Verification:** Halt signal correctly generated
 
 #### Test 8: Verify Halt Blocks Register Writes ✅
+
 - **Purpose:** Ensure halt signal freezes register file writes
 - **Actions:** Attempt to write to R5 while halt is active
 - **Expected Behavior:** Register write should be blocked
@@ -99,15 +111,17 @@ All files compiled successfully with 0 errors:
 - **Verification:** Register file correctly ignores writes when halted
 
 #### Test 9: Reset to Clear Halt ✅
+
 - **Purpose:** Verify reset clears halt condition
 - **Actions:** Apply reset signal
-- **Expected Behavior:** 
+- **Expected Behavior:**
   - hlt: `0` (halt cleared)
   - System ready for normal operation
 - **Status:** PASSED
 - **Verification:** Halt successfully cleared by reset
 
 #### Test 10: MOV R1, R5 ✅
+
 - **Purpose:** Test register-to-register move (R-Type)
 - **Instruction:** `0000011_001_101_000_0000000000000000`
 - **Expected Behavior:**
@@ -119,8 +133,9 @@ All files compiled successfully with 0 errors:
 - **Verification:** Move operation correctly decoded
 
 #### Test 11: Previous_is_immediate Flag ✅
+
 - **Purpose:** Test pipeline control for immediate instructions
-- **Actions:** 
+- **Actions:**
   - Set previous_is_immediate = '1'
   - Issue new instruction
 - **Expected Behavior:** Pipeline handles immediate flag correctly
@@ -130,12 +145,14 @@ All files compiled successfully with 0 errors:
 ## Coverage Summary
 
 ### Instruction Types Tested
+
 - ✅ R-Type (ADD, MOV)
 - ✅ I-Type (LDM)
 - ✅ J-Type (JZ)
 - ✅ System (PUSH, HLT)
 
 ### Control Signals Verified
+
 - ✅ ALU operation codes
 - ✅ Register write enable
 - ✅ Memory read/write
@@ -147,22 +164,26 @@ All files compiled successfully with 0 errors:
 - ✅ Special operations (swap, call, ret, int, rti)
 
 ### Register File Operations
+
 - ✅ Asynchronous read (Rs1, Rs2)
 - ✅ Synchronous write (Rd)
 - ✅ Halt freeze functionality
 - ✅ Reset behavior
 
 ### Pipeline Control
+
 - ✅ PC passthrough (pc_in_plus_1 → pc_out_plus_1)
 - ✅ Previous instruction immediate flag handling
 
 ## Warnings Analysis
 
 ### Warning 1 & 2: NUMERIC_STD.TO_INTEGER metavalue
+
 ```
 ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
    Time: 0 ps  Iteration: 0  Instance: /decode_stage_tb/uut/reg_file
 ```
+
 **Analysis:** These warnings occur at time=0 during initialization when register address signals contain 'U' (uninitialized) values. The TO_INTEGER function defaults to 0, which is correct behavior. These are not functional errors.
 
 **Resolution:** Expected behavior - no action needed.
@@ -191,10 +212,12 @@ The decode stage is **ready for integration** with other pipeline stages (Fetch,
 7. 🔄 Full 5-stage processor integration testing
 
 ## Files Tested
+
 - `register_file.vhd` - 8-register file with halt support
 - `control_unit.vhd` - Instruction decoder and control signal generator
 - `decode_stage.vhd` - Complete decode stage with register file and control unit
 - `decode_stage_tb.vhd` - Comprehensive testbench with 11 test cases
 
 ## Test Script
+
 - `run_decode_stage_tb.do` - ModelSim automation script
