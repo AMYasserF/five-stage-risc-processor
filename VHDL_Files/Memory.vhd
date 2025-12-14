@@ -26,8 +26,9 @@ begin
 	   if(mem_write = '1') then
 		  memory(to_integer(unsigned(address))) <= write_data;
 		end if;
-		read_data <= memory(to_integer(unsigned(address)));
 	 end if;
   end process;
+  
+  read_data <= memory(to_integer(unsigned(address)));
      
 end a_Memory;
