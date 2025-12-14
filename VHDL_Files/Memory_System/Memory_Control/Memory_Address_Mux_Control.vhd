@@ -2,8 +2,9 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
--- Control Unit Template for Memory Address Mux
+-- Control Unit for Memory Address Mux
 -- This control unit decides which address to use for memory access
+-- Part of the unified memory system (Harvard architecture with shared memory)
 -- Selection options:
 --   "000" - PC Register (instruction fetch)
 --   "001" - SP Register (stack operations)
