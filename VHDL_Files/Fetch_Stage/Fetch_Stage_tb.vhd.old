@@ -1,0 +1,299 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+
+entity Fetch_Stage_tb is
+end Fetch_Stage_tb;
+
+architecture Behavioral of Fetch_Stage_tb is
+    -- Component Declaration
+    component Fetch_Stage is
+        Port (
+            clk : in STD_LOGIC;
+            rst : in STD_LOGIC;
+            pc_enable : in STD_LOGIC;
+            ifid_enable : in STD_LOGIC;
+            ifid_flush : in STD_LOGIC;
+            int_signal : in STD_LOGIC;
+            int_index : in STD_LOGIC;
+            int_phase : in STD_LOGIC_VECTOR(1 downto 0);
+            is_ret : in STD_LOGIC;
+            ret_phase : in STD_LOGIC_VECTOR(1 downto 0);
+            is_call : in STD_LOGIC;
+            is_conditional_jump : in STD_LOGIC;
+            jump_condition_met : in STD_LOGIC;
+            is_unconditional_jump : in STD_LOGIC;
+            immediate_decode : in STD_LOGIC_VECTOR(31 downto 0);
+            alu_immediate : in STD_LOGIC_VECTOR(31 downto 0);
+            sp_value : in STD_LOGIC_VECTOR(31 downto 0);
+            mem_fetch_address : out STD_LOGIC_VECTOR(31 downto 0);
+            mem_fetch_read_enable : out STD_LOGIC;
+            mem_fetch_read_data : in STD_LOGIC_VECTOR(31 downto 0);
+            instruction_out : out STD_LOGIC_VECTOR(31 downto 0);
+            pc_plus_1_out : out STD_LOGIC_VECTOR(31 downto 0)
+        );
+    end component;
+    
+    -- Clock and Reset
+    signal clk : STD_LOGIC := '0';
+    signal rst : STD_LOGIC := '0';
+    
+    -- Control Signals
+    signal pc_enable : STD_LOGIC := '1';
+    signal ifid_enable : STD_LOGIC := '1';
+    signal ifid_flush : STD_LOGIC := '0';
+    
+    -- Interrupt Control
+    signal int_signal : STD_LOGIC := '0';
+    signal int_index : STD_LOGIC := '0';
+    signal int_phase : STD_LOGIC_VECTOR(1 downto 0) := "00";
+    
+    -- Return Control
+    signal is_ret : STD_LOGIC := '0';
+    signal ret_phase : STD_LOGIC_VECTOR(1 downto 0) := "00";
+    
+    -- Jump/Branch Control
+    signal is_call : STD_LOGIC := '0';
+    signal is_conditional_jump : STD_LOGIC := '0';
+    signal jump_condition_met : STD_LOGIC := '0';
+    signal is_unconditional_jump : STD_LOGIC := '0';
+    
+    -- Data inputs
+    signal immediate_decode : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal alu_immediate : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal sp_value : STD_LOGIC_VECTOR(31 downto 0) := X"000FFFFC";  -- Example SP
+    
+    -- Memory Interface
+    signal mem_fetch_address : STD_LOGIC_VECTOR(31 downto 0);
+    signal mem_fetch_read_enable : STD_LOGIC;
+    signal mem_fetch_read_data : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    
+    -- Outputs
+    signal instruction_out : STD_LOGIC_VECTOR(31 downto 0);
+    signal pc_plus_1_out : STD_LOGIC_VECTOR(31 downto 0);
+    
+    -- Clock period
+    constant clk_period : time := 10 ns;
+    
+    -- Simulated memory array
+    type memory_array is array (0 to 255) of STD_LOGIC_VECTOR(31 downto 0);
+    signal simulated_memory : memory_array := (
+        0 => X"12345678",  -- M[0] - Reset vector
+        1 => X"AABBCCDD",  -- M[1] - Instruction
+        2 => X"00000100",  -- M[2] - INT 0 vector
+        3 => X"00000200",  -- M[3] - INT 1 vector
+        4 => X"11111111",  -- M[4] - Instruction
+        5 => X"22222222",  -- M[5] - Instruction
+        6 => X"33333333",  -- M[6] - Instruction
+        16 => X"000000F0", -- M[16] - Jump target
+        32 => X"000000AA", -- M[32] - Unconditional jump target
+        240 => X"00000005", -- M[240] - Return address
+        others => X"00000000"
+    );
+    
+begin
+    -- Instantiate the Unit Under Test (UUT)
+    uut: Fetch_Stage
+        port map (
+            clk => clk,
+            rst => rst,
+            pc_enable => pc_enable,
+            ifid_enable => ifid_enable,
+            ifid_flush => ifid_flush,
+            int_signal => int_signal,
+            int_index => int_index,
+            int_phase => int_phase,
+            is_ret => is_ret,
+            ret_phase => ret_phase,
+            is_call => is_call,
+            is_conditional_jump => is_conditional_jump,
+            jump_condition_met => jump_condition_met,
+            is_unconditional_jump => is_unconditional_jump,
+            immediate_decode => immediate_decode,
+            alu_immediate => alu_immediate,
+            sp_value => sp_value,
+            mem_fetch_address => mem_fetch_address,
+            mem_fetch_read_enable => mem_fetch_read_enable,
+            mem_fetch_read_data => mem_fetch_read_data,
+            instruction_out => instruction_out,
+            pc_plus_1_out => pc_plus_1_out
+        );
+    
+    -- Clock process
+    clk_process: process
+    begin
+        clk <= '0';
+        wait for clk_period/2;
+        clk <= '1';
+        wait for clk_period/2;
+    end process;
+    
+    -- Simulated memory read
+    memory_process: process(mem_fetch_address)
+        variable addr : integer;
+    begin
+        addr := to_integer(unsigned(mem_fetch_address(7 downto 0)));
+        if addr < 256 then
+            mem_fetch_read_data <= simulated_memory(addr);
+        else
+            mem_fetch_read_data <= X"00000000";
+        end if;
+    end process;
+    
+    -- Stimulus process
+    stim_proc: process
+    begin
+        -- Test 1: Reset
+        report "========================================";
+        report "Test 1: Reset - PC should load M[0]";
+        report "========================================";
+        rst <= '1';
+        wait for clk_period * 2;
+        rst <= '0';
+        wait for clk_period;
+        assert mem_fetch_address = X"00000000" 
+            report "FAIL: After reset, PC should be 0" severity error;
+        wait for clk_period;
+        
+        -- Test 2: Normal Sequential Execution
+        report "========================================";
+        report "Test 2: Normal Execution (PC + 1)";
+        report "========================================";
+        wait for clk_period * 5;
+        report "PC incremented normally";
+        
+        -- Test 3: Conditional Jump (taken)
+        report "========================================";
+        report "Test 3: Conditional Jump (taken)";
+        report "========================================";
+        immediate_decode <= X"00000010";  -- Jump to address 16
+        is_conditional_jump <= '1';
+        jump_condition_met <= '1';
+        wait for clk_period;
+        is_conditional_jump <= '0';
+        jump_condition_met <= '0';
+        wait for clk_period * 2;
+        assert mem_fetch_address = X"00000010" 
+            report "FAIL: PC should jump to 0x10" severity error;
+        report "Conditional jump executed";
+        wait for clk_period * 2;
+        
+        -- Test 4: Conditional Jump (not taken)
+        report "========================================";
+        report "Test 4: Conditional Jump (not taken)";
+        report "========================================";
+        immediate_decode <= X"000000FF";
+        is_conditional_jump <= '1';
+        jump_condition_met <= '0';  -- Condition not met
+        wait for clk_period;
+        is_conditional_jump <= '0';
+        wait for clk_period * 2;
+        report "Conditional jump not taken, PC continued normally";
+        
+        -- Test 5: CALL Instruction
+        report "========================================";
+        report "Test 5: CALL Instruction";
+        report "========================================";
+        alu_immediate <= X"00000020";  -- CALL to address 32
+        is_call <= '1';
+        wait for clk_period;
+        is_call <= '0';
+        wait for clk_period * 2;
+        assert mem_fetch_address = X"00000020" 
+            report "FAIL: PC should jump to CALL target 0x20" severity error;
+        report "CALL executed";
+        wait for clk_period * 2;
+        
+        -- Test 6: Unconditional Jump
+        report "========================================";
+        report "Test 6: Unconditional Jump";
+        report "========================================";
+        is_unconditional_jump <= '1';
+        wait for clk_period;
+        is_unconditional_jump <= '0';
+        wait for clk_period * 2;
+        report "Unconditional jump executed (target from memory)";
+        wait for clk_period * 2;
+        
+        -- Test 7: RET Instruction
+        report "========================================";
+        report "Test 7: RET Instruction (2 cycles)";
+        report "========================================";
+        sp_value <= X"000000F0";  -- SP pointing to return address at M[240]
+        is_ret <= '1';
+        ret_phase <= "01";  -- Phase 1: SP increment
+        wait for clk_period;
+        ret_phase <= "10";  -- Phase 2: Load PC from M[SP]
+        wait for clk_period;
+        is_ret <= '0';
+        ret_phase <= "00";
+        wait for clk_period * 2;
+        report "RET executed (PC loaded from stack)";
+        wait for clk_period * 2;
+        
+        -- Test 8: Interrupt INT 0
+        report "========================================";
+        report "Test 8: Interrupt INT 0";
+        report "========================================";
+        int_signal <= '1';
+        int_index <= '0';  -- INT 0
+        int_phase <= "01";  -- Phase 1: Save PC
+        wait for clk_period;
+        int_phase <= "10";  -- Phase 2: Load PC from M[2]
+        wait for clk_period;
+        int_signal <= '0';
+        int_phase <= "00";
+        wait for clk_period * 2;
+        assert mem_fetch_address = X"00000100" 
+            report "FAIL: PC should jump to INT 0 vector (0x100)" severity error;
+        report "INT 0 executed";
+        wait for clk_period * 2;
+        
+        -- Test 9: Interrupt INT 1
+        report "========================================";
+        report "Test 9: Interrupt INT 1";
+        report "========================================";
+        int_signal <= '1';
+        int_index <= '1';  -- INT 1
+        int_phase <= "01";
+        wait for clk_period;
+        int_phase <= "10";  -- Load PC from M[3]
+        wait for clk_period;
+        int_signal <= '0';
+        int_phase <= "00";
+        wait for clk_period * 2;
+        assert mem_fetch_address = X"00000200" 
+            report "FAIL: PC should jump to INT 1 vector (0x200)" severity error;
+        report "INT 1 executed";
+        wait for clk_period * 2;
+        
+        -- Test 10: Pipeline Flush
+        report "========================================";
+        report "Test 10: Pipeline Flush";
+        report "========================================";
+        ifid_flush <= '1';
+        wait for clk_period;
+        ifid_flush <= '0';
+        wait for clk_period * 2;
+        report "IF/ID register flushed";
+        
+        -- Test 11: Pipeline Stall
+        report "========================================";
+        report "Test 11: Pipeline Stall";
+        report "========================================";
+        pc_enable <= '0';
+        ifid_enable <= '0';
+        wait for clk_period * 3;
+        pc_enable <= '1';
+        ifid_enable <= '1';
+        wait for clk_period * 2;
+        report "Pipeline stall released";
+        
+        -- End simulation
+        report "========================================";
+        report "All tests completed successfully!";
+        report "========================================";
+        wait;
+    end process;
+    
+end Behavioral;

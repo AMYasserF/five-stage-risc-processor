@@ -1,0 +1,122 @@
+# do run_waveform.do
+# ** Warning: (vlib-34) Library already exists at "work".
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 01:05:38 on Dec 15,2025
+# vcom -reportprogress 300 -93 PC_Register.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity PC_Register
+# -- Compiling architecture Behavioral of PC_Register
+# End time: 01:05:38 on Dec 15,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 01:05:38 on Dec 15,2025
+# vcom -reportprogress 300 -93 PC_Adder.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity PC_Adder
+# -- Compiling architecture Behavioral of PC_Adder
+# End time: 01:05:38 on Dec 15,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 01:05:38 on Dec 15,2025
+# vcom -reportprogress 300 -93 PC_Mux.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity PC_Mux
+# -- Compiling architecture Behavioral of PC_Mux
+# End time: 01:05:38 on Dec 15,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 01:05:38 on Dec 15,2025
+# vcom -reportprogress 300 -93 IF_ID_Register.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity IF_ID_Register
+# -- Compiling architecture Behavioral of IF_ID_Register
+# End time: 01:05:38 on Dec 15,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 01:05:38 on Dec 15,2025
+# vcom -reportprogress 300 -93 Fetch_Control_Units/PC_Mux_Control.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity PC_Mux_Control
+# -- Compiling architecture Behavioral of PC_Mux_Control
+# End time: 01:05:38 on Dec 15,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 01:05:38 on Dec 15,2025
+# vcom -reportprogress 300 -93 Fetch_Stage.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity Fetch_Stage
+# -- Compiling architecture Structural of Fetch_Stage
+# End time: 01:05:38 on Dec 15,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 01:05:38 on Dec 15,2025
+# vcom -reportprogress 300 -93 Fetch_Stage_tb.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity Fetch_Stage_tb
+# -- Compiling architecture Behavioral of Fetch_Stage_tb
+# End time: 01:05:38 on Dec 15,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# vsim Fetch_Stage_tb 
+# Start time: 01:05:38 on Dec 15,2025
+# Loading std.standard
+# Loading std.textio(body)
+# Loading ieee.std_logic_1164(body)
+# Loading ieee.numeric_std(body)
+# Loading work.fetch_stage_tb(behavioral)
+# Loading work.fetch_stage(structural)
+# Loading work.pc_register(behavioral)
+# Loading work.pc_adder(behavioral)
+# Loading work.pc_mux_control(behavioral)
+# Loading work.pc_mux(behavioral)
+# Loading work.if_id_register(behavioral)
+# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
+#    Time: 0 ps  Iteration: 0  Instance: /fetch_stage_tb
+# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
+#    Time: 0 ps  Iteration: 0  Instance: /fetch_stage_tb
+# ** Note: During reset, PC value: 0
+#    Time: 20 ns  Iteration: 0  Instance: /fetch_stage_tb
+# ** Note: After reset, PC value: 5
+#    Time: 30 ns  Iteration: 0  Instance: /fetch_stage_tb
+# ** Note: Test 1: Reset Vector PASS - PC loaded 0x04, now at 0x05
+#    Time: 30 ns  Iteration: 0  Instance: /fetch_stage_tb
+# ** Note: Test 2: Sequential PASS
+#    Time: 80 ns  Iteration: 0  Instance: /fetch_stage_tb
+# ** Note: Test 3: Cond Jump PASS
+#    Time: 120 ns  Iteration: 0  Instance: /fetch_stage_tb
+# ** Note: Test 4: CALL PASS
+#    Time: 160 ns  Iteration: 0  Instance: /fetch_stage_tb
+# ** Note: Test 5: RET PASS
+#    Time: 200 ns  Iteration: 0  Instance: /fetch_stage_tb
+# ** Note: Test 6: INT PASS
+#    Time: 240 ns  Iteration: 0  Instance: /fetch_stage_tb
+# ** Note: ALL TESTS COMPLETE
+#    Time: 240 ns  Iteration: 0  Instance: /fetch_stage_tb
+# 0 ps
+# 525 ns
+# =========================================
+# Fetch Stage Simulation Complete
+# =========================================
+# All test cases executed successfully
+# Review waveform for timing details
+# =========================================
