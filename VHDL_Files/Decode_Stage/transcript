@@ -1,0 +1,109 @@
+# do run_decode_stage_tb.do
+# ** Warning: (vlib-34) Library already exists at "work".
+# Compiling Register File...
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 23:31:32 on Dec 14,2025
+# vcom -2008 register_file.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity register_file
+# -- Compiling architecture Behavioral of register_file
+# End time: 23:31:32 on Dec 14,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Compiling Control Unit...
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 23:31:32 on Dec 14,2025
+# vcom -2008 control_unit.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity control_unit
+# -- Compiling architecture Behavioral of control_unit
+# End time: 23:31:32 on Dec 14,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Compiling Decode Stage...
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 23:31:32 on Dec 14,2025
+# vcom -2008 decode_stage.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity decode_stage
+# -- Compiling architecture Behavioral of decode_stage
+# End time: 23:31:32 on Dec 14,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Compiling Testbench...
+# Model Technology ModelSim - Intel FPGA Edition vcom 10.5b Compiler 2016.10 Oct  5 2016
+# Start time: 23:31:32 on Dec 14,2025
+# vcom -2008 decode_stage_tb.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity decode_stage_tb
+# -- Compiling architecture Behavioral of decode_stage_tb
+# End time: 23:31:33 on Dec 14,2025, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# Starting simulation...
+# vsim -voptargs="+acc" work.decode_stage_tb 
+# Start time: 23:31:33 on Dec 14,2025
+# Loading std.standard
+# Loading std.textio(body)
+# Loading ieee.std_logic_1164(body)
+# Loading ieee.numeric_std(body)
+# Loading work.decode_stage_tb(behavioral)
+# Loading work.decode_stage(behavioral)
+# Loading work.register_file(behavioral)
+# Loading work.control_unit(behavioral)
+# Adding signals to waveform...
+# configure wave not supported in batch mode
+# configure wave not supported in batch mode
+# configure wave not supported in batch mode
+# configure wave not supported in batch mode
+# configure wave not supported in batch mode
+# configure wave not supported in batch mode
+# configure wave not supported in batch mode
+# configure wave not supported in batch mode
+# Running simulation for 500ns...
+# ** Note: Test 1: Reset
+#    Time: 0 ps  Iteration: 0  Instance: /decode_stage_tb
+# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
+#    Time: 0 ps  Iteration: 0  Instance: /decode_stage_tb/uut/reg_file
+# ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
+#    Time: 0 ps  Iteration: 0  Instance: /decode_stage_tb/uut/reg_file
+# ** Note: Test 2: Write to R1 and R2
+#    Time: 30 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: Test 3: ADD R3, R1, R2
+#    Time: 60 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: Test 4: LDM R4, 99
+#    Time: 70 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: Test 5: JZ target
+#    Time: 80 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: Test 6: PUSH R7
+#    Time: 90 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: Test 7: HLT
+#    Time: 110 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: Test 8: Verify halt blocks register writes
+#    Time: 120 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: Test 9: Reset to clear halt
+#    Time: 140 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: Test 10: MOV R1, R5
+#    Time: 170 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: Test 11: Test previous_is_immediate flag
+#    Time: 190 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: ========================================
+#    Time: 250 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: All tests completed successfully!
+#    Time: 250 ns  Iteration: 0  Instance: /decode_stage_tb
+# ** Note: ========================================
+#    Time: 250 ns  Iteration: 0  Instance: /decode_stage_tb
+# wave zoomfull not supported in batch mode
+# Simulation complete! Check waveform for results.
+# All assertion messages are shown in the transcript window.
+#  quit -f
+# End time: 23:31:33 on Dec 14,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 2
