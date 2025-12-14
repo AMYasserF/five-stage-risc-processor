@@ -2,8 +2,9 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
--- Control Unit Template for Memory Write Data Mux
+-- Control Unit for Memory Write Data Mux
 -- This control unit decides which data to write to memory
+-- Part of the unified memory system (Harvard architecture with shared memory)
 -- Selection options:
 --   "00" - CCR Register (saving condition codes)
 --   "01" - PC + 1 from ID/EX register (for call/interrupt)
