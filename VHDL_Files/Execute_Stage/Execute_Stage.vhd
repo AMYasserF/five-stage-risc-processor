@@ -108,6 +108,7 @@ architecture rtl of ex_stage is
       -- input data signals
       alu_result_in  : in  std_logic_vector(31 downto 0);
       rdata2_in      : in  std_logic_vector(31 downto 0);
+      in_port_in     : in  std_logic_vector(31 downto 0);
       rsrc1_in       : in  std_logic_vector(2 downto 0);
       rdst_in        : in  std_logic_vector(2 downto 0);
       is_hult_in     : in  std_logic;
@@ -131,6 +132,7 @@ architecture rtl of ex_stage is
       -- output data signals
       alu_result_out : out std_logic_vector(31 downto 0);
       rdata2_out     : out std_logic_vector(31 downto 0);
+      in_port_out    : out std_logic_vector(31 downto 0);
       rsrc1_out      : out std_logic_vector(2 downto 0);
       rdst_out       : out std_logic_vector(2 downto 0);
       is_hult_out    : out std_logic;
@@ -175,6 +177,8 @@ architecture rtl of ex_stage is
   signal z_flag, n_flag, c_flag : std_logic;
   signal cond_jump              : std_logic;
   signal n_ccr                  : std_logic_vector(2 downto 0);
+  signal int_phase_s : std_logic;
+  signal rti_phase_s   : std_logic;
 
 begin
 
@@ -388,8 +392,11 @@ begin
 
   conditional_jump <= cond_jump;
   next_ccr         <= n_ccr;
-  int_phase        <= int_phase_previous or int_phase_next;
-  rti_phase        <= rti_phase_previous or rti_phase_next;
+
+  int_phase_s        <= int_phase_previous or int_phase_next;
+  rti_phase_s        <= rti_phase_previous or rti_phase_next;
+  int_phase          <= int_phase_s;
+  rti_phase          <= rti_phase_s;
   exmem_immediate  <= ifd_imm; -- for LDM  Rdst, Imm
   -- Flag outputs
   ex_flags_z       <= z_flag;
@@ -418,8 +425,8 @@ begin
       mem_to_reg_in  => mem_to_reg_in,
       mem_read_in    => mem_read_in,
       meme_write_in  => mem_write_in,
-      int_phase_in   => int_phase,
-      rti_phase_in   => rti_phase,
+      int_phase_in   => int_phase_s,
+      rti_phase_in   => rti_phase_s,
       is_pop_in      => is_pop_in,
       is_push_in     => is_push_in,
       alu_addr_in    => alu_addr_in,

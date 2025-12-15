@@ -21,39 +21,36 @@ end entity;
 architecture Behavioral of Forwarding_Unit is
 begin
 
-  process (all)
+  process (ID_EX_RegRs, EX_MEM_RegWrite, EX_MEM_DestReg, MEM_WB_RegWrite, MEM_WB_DestReg)
   begin
-    ForwardA <= "00"; -- Default: no forwarding (use value read from Reg File)
+    ForwardA <= "00";
 
     if (EX_MEM_RegWrite = '1') then
       if (EX_MEM_DestReg = ID_EX_RegRs) then
-        ForwardA <= "01"; -- Forward from EX/MEM stage
+        ForwardA <= "01";
       end if;
     end if;
 
     if (MEM_WB_RegWrite = '1') then
       if (MEM_WB_DestReg = ID_EX_RegRs) then
-        -- Only forward from MEM/WB if EX/MEM is NOT forwarding the result
         if not (EX_MEM_RegWrite = '1' and EX_MEM_DestReg = ID_EX_RegRs) then
-          ForwardA <= "10"; -- Forward from MEM/WB stage
+          ForwardA <= "10";
         end if;
       end if;
     end if;
-
   end process;
 
-  process (all)
-  begin
-    ForwardB <= "00"; -- Default: no forwarding
 
-    -- Check 1: EX/MEM -> EX
+  process (ID_EX_RegRt, EX_MEM_RegWrite, EX_MEM_DestReg, MEM_WB_RegWrite, MEM_WB_DestReg)
+  begin
+    ForwardB <= "00";
+
     if (EX_MEM_RegWrite = '1') then
       if (EX_MEM_DestReg = ID_EX_RegRt) then
         ForwardB <= "01";
       end if;
     end if;
 
-    -- Check 2: MEM/WB -> EX
     if (MEM_WB_RegWrite = '1') then
       if (MEM_WB_DestReg = ID_EX_RegRt) then
         if not (EX_MEM_RegWrite = '1' and EX_MEM_DestReg = ID_EX_RegRt) then
