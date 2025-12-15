@@ -59,12 +59,17 @@ entity ex_stage is
     is_rti_in          : in  std_logic;
     -- Forwarding control inputs (from Forwarding Unit)
     -- 00 = use idex operand, 01 = forward from EX/MEM, 10 = forward from MEM/WB
-    forwardA           : in  std_logic_vector(1 downto 0);
-    forwardB           : in  std_logic_vector(1 downto 0);
+    forwardA           : in  std_logic_vector(3 downto 0);
+    forwardB           : in  std_logic_vector(3 downto 0);
 
     -- Values to forward from later stages
     exmem_alu_result   : in  std_logic_vector(31 downto 0); -- EX/MEM ALU result
+    exmem_in_port     : in  std_logic_vector(31 downto 0); -- EX/MEM IN port value
+    exmem_swap_rdata2  : in  std_logic_vector(31 downto 0); -- EX/MEM SWAP second operand
     memwb_result       : in  std_logic_vector(31 downto 0); -- MEM/WB result
+    memwb_alu_result   : in  std_logic_vector(31 downto 0); -- MEM/WB ALU result
+    memwb_in_port     : in  std_logic_vector(31 downto 0); -- MEM/WB IN port value
+    memwb_swap_rdata2  : in  std_logic_vector(31 downto 0); -- MEM/WB SWAP second operand
 
     -- Outputs -> EX/MEM pipeline register
     exmem_alu_out      : out std_logic_vector(31 downto 0);
@@ -188,9 +193,16 @@ begin
   process (idex_rdata1, exmem_alu_result, memwb_result, forwardA)
   begin
     case forwardA is
-      when "00" => opA <= idex_rdata1; -- No forwarding
-      when "01" => opA <= exmem_alu_result; -- Forward from EX/MEM
-      when "10" => opA <= memwb_result; -- Forward from MEM/WB
+      when "0000" => opA <= idex_rdata1; -- No forwarding
+      when "0001" => opA <= exmem_alu_result; -- Forward from EX/MEM
+      when "0010" => opA <= exmem_alu_result;
+      when "0011" => opA <= exmem_swap_rdata2; 
+      when "0100" => opA <= exmem_in_port; 
+        
+      when "0101" => opA <= memwb_result; -- Forward from MEM/WB
+      when "0110" => opA <= memwb_alu_result; 
+      when "0111" => opA <= memwb_swap_rdata2; 
+      when "1000" => opA <= memwb_in_port;
       when others => opA <= idex_rdata1;
     end case;
   end process;
@@ -198,9 +210,16 @@ begin
   process (idex_rdata2, exmem_alu_result, memwb_result, forwardB)
   begin
     case forwardB is
-      when "00" => opB <= idex_rdata2; -- No forwarding
-      when "01" => opB <= exmem_alu_result; -- Forward from EX/MEM
-      when "10" => opB <= memwb_result; -- Forward from MEM/WB
+      when "0000" => opB <= idex_rdata2; -- No forwarding
+      when "0001" => opB <= exmem_alu_result;
+      when "0010" => opB <= exmem_alu_result;
+      when "0011" => opB <= exmem_swap_rdata2;
+      when "0100" => opB <= exmem_in_port;
+        
+      when "0101" => opB <= memwb_result;
+      when "0110" => opB <= exmem_alu_result;
+      when "0111" => opB <= memwb_swap_rdata2;
+      when "1000" => opB <= memwb_in_port;
       when others => opB <= idex_rdata2;
     end case;
   end process;
