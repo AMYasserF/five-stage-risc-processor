@@ -2,6 +2,10 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
+-- Stack Pointer Register
+-- Initializes to 2^18 - 1 (262143) on reset
+-- 32-bit register for stack pointer management
+
 entity SP_Register is
     Port (
         clk : in STD_LOGIC;
@@ -13,16 +17,22 @@ entity SP_Register is
 end SP_Register;
 
 architecture Behavioral of SP_Register is
+    -- Initialize to 2^18 - 1 = 262143 = 0x0003FFFF
+    constant SP_RESET_VALUE : STD_LOGIC_VECTOR(31 downto 0) := X"0003FFFF";
+    signal sp_internal : STD_LOGIC_VECTOR(31 downto 0) := SP_RESET_VALUE;
 begin
+    
     process(clk, rst)
     begin
         if rst = '1' then
-            -- Initialize SP to 2^18 - 1 (262143)
-            sp_out <= std_logic_vector(to_unsigned(262143, 32));
+            sp_internal <= SP_RESET_VALUE;
         elsif rising_edge(clk) then
             if enable = '1' then
-                sp_out <= sp_in;
+                sp_internal <= sp_in;
             end if;
         end if;
     end process;
+    
+    sp_out <= sp_internal;
+    
 end Behavioral;
