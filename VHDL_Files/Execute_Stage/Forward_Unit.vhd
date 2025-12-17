@@ -20,6 +20,7 @@ entity Forwarding_Unit is
     MEM_WB_Rsrc1    : in  std_logic_vector(2 downto 0);
     MEM_WB_is_swap  : in  std_logic;
     MEM_WB_is_in    : in  std_logic;
+    MEM_WB_mem_to_reg: in std_logic;
 
     -- Forwarding controls
     ForwardA        : out std_logic_vector(3 downto 0);
@@ -35,46 +36,48 @@ begin
   --------------------------------------------------------------------
   process (ID_EX_RegRs, EX_MEM_RegWrite, EX_MEM_DestReg, EX_MEM_Rsrc1,
     EX_MEM_is_swap, EX_MEM_is_in, MEM_WB_RegWrite, MEM_WB_DestReg,
-    MEM_WB_Rsrc1, MEM_WB_is_swap, MEM_WB_is_in)
+    MEM_WB_Rsrc1, MEM_WB_is_swap, MEM_WB_is_in, MEM_WB_mem_to_reg)
   begin
-    ForwardA <= "0000"; -- default: no forwarding
+    -- Default
+ForwardA <= "0000";
 
-    -- EX/MEM has highest priority
-    if EX_MEM_RegWrite = '1' then
-      if EX_MEM_is_swap = '1' then
-        if EX_MEM_Rsrc1 = ID_EX_RegRs then
-          ForwardA <= "0010";
-        elsif EX_MEM_DestReg = ID_EX_RegRs then
+-- EX/MEM match?
+    if EX_MEM_RegWrite = '1' and
+       (EX_MEM_DestReg = ID_EX_RegRs or
+         (EX_MEM_is_swap = '1' and EX_MEM_Rsrc1 = ID_EX_RegRs)) then
+
+      if EX_MEM_DestReg = ID_EX_RegRs then
+        if EX_MEM_is_swap = '1' then
           ForwardA <= "0011";
-        end if;
-      elsif EX_MEM_is_in = '1' then
-        if EX_MEM_DestReg = ID_EX_RegRs then
+        elsif EX_MEM_is_in = '1' then
           ForwardA <= "0100";
-        end if;
-      else
-        if EX_MEM_DestReg = ID_EX_RegRs then
+        else
           ForwardA <= "0001";
         end if;
+      else
+        -- swap Rsrc1 match
+        ForwardA <= "0010";
       end if;
 
-      -- MEM/WB (only if EX/MEM didn't match)
-    elsif MEM_WB_RegWrite = '1' then
-      if MEM_WB_is_swap = '1' then
-        if MEM_WB_Rsrc1 = ID_EX_RegRs then
-          ForwardA <= "0110";
-        elsif MEM_WB_DestReg = ID_EX_RegRs then
+      -- MEM/WB match?
+    elsif MEM_WB_RegWrite = '1' and (MEM_WB_DestReg = ID_EX_RegRs or (MEM_WB_is_swap = '1' and MEM_WB_Rsrc1 = ID_EX_RegRs)) then
+
+      if MEM_WB_DestReg = ID_EX_RegRs then
+        if MEM_WB_is_swap = '1' then
           ForwardA <= "0111";
-        end if;
-      elsif MEM_WB_is_in = '1' then
-        if MEM_WB_DestReg = ID_EX_RegRs then
+        elsif MEM_WB_is_in = '1' then
           ForwardA <= "1000";
+        elsif MEM_WB_mem_to_reg = '1' then
+          ForwardA <= "0101";
+        else
+          ForwardA <= "1001";
         end if;
       else
-        if MEM_WB_DestReg = ID_EX_RegRs then
-          ForwardA <= "0101";
-        end if;
+        -- swap Rsrc1 match
+        ForwardA <= "0110";
       end if;
     end if;
+
   end process;
 
   --------------------------------------------------------------------
@@ -83,46 +86,46 @@ begin
   --------------------------------------------------------------------
   process (ID_EX_RegRt, EX_MEM_RegWrite, EX_MEM_DestReg, EX_MEM_Rsrc1,
     EX_MEM_is_swap, EX_MEM_is_in, MEM_WB_RegWrite, MEM_WB_DestReg,
-    MEM_WB_Rsrc1, MEM_WB_is_swap, MEM_WB_is_in)
+    MEM_WB_Rsrc1, MEM_WB_is_swap, MEM_WB_is_in, MEM_WB_mem_to_reg)
   begin
-    ForwardB <= "0000"; -- default
+    -- Default
+ForwardB <= "0000";
 
-    -- EX/MEM priority
-    if EX_MEM_RegWrite = '1' then
-      if EX_MEM_is_swap = '1' then
-        if EX_MEM_Rsrc1 = ID_EX_RegRt then
-          ForwardB <= "0010";
-        elsif EX_MEM_DestReg = ID_EX_RegRt then
+-- EX/MEM match?
+    if EX_MEM_RegWrite = '1' and
+       (EX_MEM_DestReg = ID_EX_RegRt or
+         (EX_MEM_is_swap = '1' and EX_MEM_Rsrc1 = ID_EX_RegRt)) then
+
+      if EX_MEM_DestReg = ID_EX_RegRt then
+        if EX_MEM_is_swap = '1' then
           ForwardB <= "0011";
-        end if;
-      elsif EX_MEM_is_in = '1' then
-        if EX_MEM_DestReg = ID_EX_RegRt then
+        elsif EX_MEM_is_in = '1' then
           ForwardB <= "0100";
-        end if;
-      else
-        if EX_MEM_DestReg = ID_EX_RegRt then
+        else
           ForwardB <= "0001";
         end if;
+      else
+        ForwardB <= "0010";
       end if;
 
-      -- MEM/WB
-    elsif MEM_WB_RegWrite = '1' then
-      if MEM_WB_is_swap = '1' then
-        if MEM_WB_Rsrc1 = ID_EX_RegRt then
-          ForwardB <= "0110";
-        elsif MEM_WB_DestReg = ID_EX_RegRt then
+      -- MEM/WB match?
+    elsif MEM_WB_RegWrite = '1' and (MEM_WB_DestReg = ID_EX_RegRt or (MEM_WB_is_swap = '1' and MEM_WB_Rsrc1 = ID_EX_RegRt)) then
+
+      if MEM_WB_DestReg = ID_EX_RegRt then
+        if MEM_WB_is_swap = '1' then
           ForwardB <= "0111";
-        end if;
-      elsif MEM_WB_is_in = '1' then
-        if MEM_WB_DestReg = ID_EX_RegRt then
+        elsif MEM_WB_is_in = '1' then
           ForwardB <= "1000";
+        elsif MEM_WB_mem_to_reg = '1' then
+          ForwardB <= "0101";
+        else
+          ForwardB <= "1001";
         end if;
       else
-        if MEM_WB_DestReg = ID_EX_RegRt then
-          ForwardB <= "0101";
-        end if;
+        ForwardB <= "0110";
       end if;
     end if;
+
   end process;
 
 end architecture;

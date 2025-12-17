@@ -190,7 +190,8 @@ begin
   -- -------------------------------------------------------------------------
   -- Forwarding Unit Muxes
   -- -------------------------------------------------------------------------
-  process (idex_rdata1, exmem_alu_result, memwb_result, forwardA)
+  process (idex_rdata1, exmem_alu_result, memwb_result, forwardA, exmem_swap_rdata2,
+           exmem_in_port, memwb_alu_result, memwb_swap_rdata2, memwb_in_port)
   begin
     case forwardA is
       when "0000" => opA <= idex_rdata1; -- No forwarding
@@ -203,23 +204,26 @@ begin
       when "0110" => opA <= memwb_alu_result; 
       when "0111" => opA <= memwb_swap_rdata2; 
       when "1000" => opA <= memwb_in_port;
+      when "1001" => opA <= memwb_alu_result;
       when others => opA <= idex_rdata1;
     end case;
   end process;
 
-  process (idex_rdata2, exmem_alu_result, memwb_result, forwardB)
+  process (idex_rdata2, exmem_alu_result, memwb_result, forwardB, exmem_swap_rdata2,
+           exmem_in_port, memwb_alu_result, memwb_swap_rdata2, memwb_in_port)
   begin
     case forwardB is
-      when "0000" => opB <= idex_rdata2; -- No forwarding
-      when "0001" => opB <= exmem_alu_result;
-      when "0010" => opB <= exmem_alu_result;
-      when "0011" => opB <= exmem_swap_rdata2;
-      when "0100" => opB <= exmem_in_port;
+      when "0000" => opB <= idex_rdata2;       -- No forwarding
+      when "0001" => opB <= exmem_alu_result;  -- for alu result
+      when "0010" => opB <= exmem_alu_result;  -- For SWAP
+      when "0011" => opB <= exmem_swap_rdata2; -- For SWAP
+      when "0100" => opB <= exmem_in_port;     -- For IN
         
-      when "0101" => opB <= memwb_result;
-      when "0110" => opB <= exmem_alu_result;
-      when "0111" => opB <= memwb_swap_rdata2;
-      when "1000" => opB <= memwb_in_port;
+      when "0101" => opB <= memwb_result;      -- for memory result
+      when "0110" => opB <= memwb_alu_result;  -- for SWAP
+      when "0111" => opB <= memwb_swap_rdata2; -- for SWAP
+      when "1000" => opB <= memwb_in_port;     -- For IN (from ex stage)
+      when "1001" => opB <= memwb_alu_result;  -- For ALU result (from ex stage)
       when others => opB <= idex_rdata2;
     end case;
   end process;
@@ -430,7 +434,7 @@ begin
       enable         => ex_mem_reg_enable,
       flush_seg      => ex_mem_reg_flush,
       alu_result_in  => alu_res_sig,
-      rdata2_in      => idex_rdata2,
+      rdata2_in      => opB,
       rsrc1_in       => rsrc1_in,
       in_port_in     => in_port_in,
       rdst_in        => idex_rd,
