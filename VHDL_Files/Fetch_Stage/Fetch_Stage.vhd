@@ -32,9 +32,9 @@ entity Fetch_Stage is
         pc_out : out STD_LOGIC_VECTOR(31 downto 0);         -- PC to memory address mux
         mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);   -- Data from memory
         
-        -- Outputs to IF/ID Register
-        instruction_out : out STD_LOGIC_VECTOR(31 downto 0);
-        pc_plus_1_out : out STD_LOGIC_VECTOR(31 downto 0)
+        -- Outputs to IF/ID Register (at top level)
+        instruction_fetch : out STD_LOGIC_VECTOR(31 downto 0);  -- Fetched instruction to IF/ID
+        pc_plus_1_fetch : out STD_LOGIC_VECTOR(31 downto 0)     -- PC+1 to IF/ID
     );
 end Fetch_Stage;
 
@@ -68,18 +68,7 @@ architecture Structural of Fetch_Stage is
         );
     end component;
     
-    component IF_ID_Register is
-        Port (
-            clk : in STD_LOGIC;
-            rst : in STD_LOGIC;
-            enable : in STD_LOGIC;
-            flush : in STD_LOGIC;
-            instruction_in : in STD_LOGIC_VECTOR(31 downto 0);
-            pc_plus_1_in : in STD_LOGIC_VECTOR(31 downto 0);
-            instruction_out : out STD_LOGIC_VECTOR(31 downto 0);
-            pc_plus_1_out : out STD_LOGIC_VECTOR(31 downto 0)
-        );
-    end component;
+
     
     -- Control Unit Components
     component PC_Mux_Control is
@@ -154,18 +143,8 @@ begin
     -- The Memory_Address_Mux will decide when to use PC vs other addresses
     pc_out <= pc_current;
     
-    -- ==================== IF/ID Pipeline Register ====================
-    
-    IFID_Reg: IF_ID_Register
-        port map (
-            clk => clk,
-            rst => rst,
-            enable => ifid_enable,
-            flush => ifid_flush,
-            instruction_in => mem_read_data,        -- Instruction from unified memory
-            pc_plus_1_in => pc_incremented,         -- PC + 1 for next instruction
-            instruction_out => instruction_out,
-            pc_plus_1_out => pc_plus_1_out
-        );
+    -- ==================== Outputs to IF/ID (instantiated at top level) ====================
+    instruction_fetch <= mem_read_data;        -- Instruction from unified memory
+    pc_plus_1_fetch <= pc_incremented;         -- PC + 1 for next instruction
     
 end Structural;
