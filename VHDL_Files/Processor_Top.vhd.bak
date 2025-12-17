@@ -60,97 +60,90 @@ architecture Structural of Processor_Top is
 
     -- excute stage
     component ex_stage is
-    port (
-		clk                : in  std_logic;
-		rst                : in  std_logic;
+      port (
+        clk                : in  std_logic;
+        rst                : in  std_logic;
 
-		-- Inputs from ID/EX pipeline register
-		idex_rdata1        : in  std_logic_vector(31 downto 0);
-		idex_rdata2        : in  std_logic_vector(31 downto 0);
-		ifd_imm            : in  std_logic_vector(31 downto 0);
-		in_port_in         : in  std_logic_vector(31 downto 0); -- for IN instruction
-		idex_rd            : in  std_logic_vector(2 downto 0);  -- dest reg
-		rsrc1_in           : in  std_logic_vector(2 downto 0);
-		is_immediate       : in  std_logic;                     -- 1 => use immediate for operand B
-		reg_write_in       : in  std_logic;                     -- register write enable (passed through)
-		mem_read_in        : in  std_logic;                     -- mem read (LDD- passed through)
-		mem_write_in       : in  std_logic;                     -- mem write (STD - passed through)
-		alu_op             : in  std_logic_vector(3 downto 0);  -- ALU function code
-		pc_plus_1_in       : in  std_logic_vector(31 downto 0); -- PC+1 for branch calculations
-		is_hult_in         : in  std_logic;
-		is_call_in         : in  std_logic;
-		is_swap_in         : in  std_logic;
-		is_in_in           : in  std_logic;
-		swap_phase_in      : in  std_logic;
-		out_enable_in      : in  std_logic;
-		mem_to_reg_in      : in  std_logic;
-		is_jumpz           : in  std_logic;
-		is_jumpc           : in  std_logic;
-		is_jumpn           : in  std_logic;
-		previous_ccr       : in  std_logic_vector(2 downto 0);  -- ZNC from previous inst
-		stack_ccr          : in  std_logic_vector(2 downto 0);  -- CCR from stack
-		ccr_in             : in  std_logic;
-		ccr_write          : in  std_logic;
-		int_phase_previous : in  std_logic;
-		int_phase_next     : in  std_logic;
-		rti_phase_previous : in  std_logic;
-		rti_phase_next     : in  std_logic;
-		is_pop_in          : in  std_logic;
-		is_push_in         : in  std_logic;
-		alu_addr_in        : in  std_logic;
-		is_int_in          : in  std_logic;
-		is_ret_in          : in  std_logic;
-		is_rti_in          : in  std_logic;
-		-- Forwarding control inputs (from Forwarding Unit)
-		-- 00 = use idex operand, 01 = forward from EX/MEM, 10 = forward from MEM/WB
-		forwardA           : in  std_logic_vector(3 downto 0);
-		forwardB           : in  std_logic_vector(3 downto 0);
+        -- Inputs from ID/EX pipeline register
+        idex_rdata1        : in  std_logic_vector(31 downto 0);
+        idex_rdata2        : in  std_logic_vector(31 downto 0);
+        ifd_imm            : in  std_logic_vector(31 downto 0);
+        in_port_in         : in  std_logic_vector(31 downto 0); -- for IN instruction
+        idex_rd            : in  std_logic_vector(2 downto 0);  -- dest reg
+        rsrc1_in           : in  std_logic_vector(2 downto 0);
+        is_immediate       : in  std_logic;                     -- 1 => use immediate for operand B
+        reg_write_in       : in  std_logic;                     -- register write enable (passed through)
+        mem_read_in        : in  std_logic;                     -- mem read (LDD- passed through)
+        mem_write_in       : in  std_logic;                     -- mem write (STD - passed through)
+        alu_op             : in  std_logic_vector(3 downto 0);  -- ALU function code
+        pc_plus_1_in       : in  std_logic_vector(31 downto 0); -- PC+1 for branch calculations
+        is_hult_in         : in  std_logic;
+        is_call_in         : in  std_logic;
+        is_swap_in         : in  std_logic;
+        is_in_in           : in  std_logic;
+        swap_phase_in      : in  std_logic;
+        out_enable_in      : in  std_logic;
+        mem_to_reg_in      : in  std_logic;
+        is_jumpz           : in  std_logic;
+        is_jumpc           : in  std_logic;
+        is_jumpn           : in  std_logic;
+        previous_ccr       : in  std_logic_vector(2 downto 0);  -- ZNC from previous inst
+        stack_ccr          : in  std_logic_vector(2 downto 0);  -- CCR from stack
+        ccr_in             : in  std_logic;
+        ccr_write          : in  std_logic;
+        int_phase_previous : in  std_logic;
+        int_phase_next     : in  std_logic;
+        rti_phase_previous : in  std_logic;
+        rti_phase_next     : in  std_logic;
+        is_pop_in          : in  std_logic;
+        is_push_in         : in  std_logic;
+        alu_addr_in        : in  std_logic;
+        is_int_in          : in  std_logic;
+        is_ret_in          : in  std_logic;
+        is_rti_in          : in  std_logic;
+        -- Forwarding control inputs (from Forwarding Unit)
+        -- 00 = use idex operand, 01 = forward from EX/MEM, 10 = forward from MEM/WB
+        forwardA           : in  std_logic_vector(3 downto 0);
+        forwardB           : in  std_logic_vector(3 downto 0);
 
-		-- Values to forward from later stages
-		exmem_alu_result   : in  std_logic_vector(31 downto 0); -- EX/MEM ALU result
-		exmem_in_port     : in  std_logic_vector(31 downto 0); -- EX/MEM IN port value
-		exmem_swap_rdata2  : in  std_logic_vector(31 downto 0); -- EX/MEM SWAP second operand
-		memwb_result       : in  std_logic_vector(31 downto 0); -- MEM/WB result
-		memwb_alu_result   : in  std_logic_vector(31 downto 0); -- MEM/WB ALU result
-		memwb_in_port     : in  std_logic_vector(31 downto 0); -- MEM/WB IN port value
-		memwb_swap_rdata2  : in  std_logic_vector(31 downto 0); -- MEM/WB SWAP second operand
+        -- Values to forward from later stages
+        exmem_alu_result   : in  std_logic_vector(31 downto 0); -- EX/MEM ALU result
+        exmem_in_port      : in  std_logic_vector(31 downto 0); -- EX/MEM IN port value
+        exmem_swap_rdata2  : in  std_logic_vector(31 downto 0); -- EX/MEM SWAP second operand
+        memwb_result       : in  std_logic_vector(31 downto 0); -- MEM/WB result
+        memwb_alu_result   : in  std_logic_vector(31 downto 0); -- MEM/WB ALU result
+        memwb_in_port      : in  std_logic_vector(31 downto 0); -- MEM/WB IN port value
+        memwb_swap_rdata2  : in  std_logic_vector(31 downto 0); -- MEM/WB SWAP second operand
 
-		-- Outputs -> EX/MEM pipeline register
-		exmem_alu_out      : out std_logic_vector(31 downto 0);
-		exmem_rdata2       : out std_logic_vector(31 downto 0); -- data to store
-		in_port_out        : out std_logic_vector(31 downto 0); -- for IN instruction
-		exmem_rd           : out std_logic_vector(2 downto 0);
-		reg_write_out      : out std_logic;
-		mem_read_out       : out std_logic;
-		mem_write_out      : out std_logic;
-		pc_plus_1_out      : out std_logic_vector(31 downto 0);
-		is_hult_out        : out std_logic;
-		is_call_out        : out std_logic;
-		is_swap_out        : out std_logic;
-		is_in_out          : out std_logic;
-		is_pop_out         : out std_logic;
-		is_push_out        : out std_logic;
+        -- Outputs -> EX/MEM pipeline register
+        exmem_alu_out      : out std_logic_vector(31 downto 0);
+        exmem_rdata2       : out std_logic_vector(31 downto 0); -- data to store
+        in_port_out        : out std_logic_vector(31 downto 0); -- for IN instruction
+        exmem_rd           : out std_logic_vector(2 downto 0);
+        reg_write_out      : out std_logic;
+        mem_read_out       : out std_logic;
+        mem_write_out      : out std_logic;
+        pc_plus_1_out      : out std_logic_vector(31 downto 0);
+        is_hult_out        : out std_logic;
+        is_call_out        : out std_logic;
+        is_swap_out        : out std_logic;
+        is_in_out          : out std_logic;
+        swap_phase_out     : out std_logic;
+        out_enable_out     : out std_logic;
+        mem_to_reg_out     : out std_logic;
+        rsrc1_out          : out std_logic_vector(2 downto 0);
+        conditional_jump   : out std_logic;                     -- indicates if jump taken
+        next_ccr           : out std_logic_vector(2 downto 0);
+        int_phase          : out std_logic;
+        rti_phase          : out std_logic;
+        exmem_immediate    : out std_logic_vector(31 downto 0); -- for LDM  Rdst, Imm
 
-		swap_phase_out     : out std_logic;
-		out_enable_out     : out std_logic;
-		mem_to_reg_out     : out std_logic;
-		rsrc1_out          : out std_logic_vector(2 downto 0);
-		conditional_jump   : out std_logic;                     -- indicates if jump taken
-		next_ccr           : out std_logic_vector(2 downto 0);
-		int_phase          : out std_logic;
-		rti_phase          : out std_logic;
-		exmem_immediate    : out std_logic_vector(31 downto 0); -- for LDM  Rdst, Imm
-		alu_addr_out      : out std_logic;
-		is_int_out         : out std_logic;
-		is_ret_out         : out std_logic;
-		is_rti_out         : out std_logic;
-
-		-- flags to propagate
-		ex_flags_z         : out std_logic;
-		ex_flags_n         : out std_logic;
-		ex_flags_c         : out std_logic
-	);
-	end component;
+        -- flags to propagate
+        ex_flags_z         : out std_logic;
+        ex_flags_n         : out std_logic;
+        ex_flags_c         : out std_logic
+      );
+    end component;
 
     -- forward unit
  component Forwarding_Unit is
@@ -380,8 +373,7 @@ architecture Structural of Processor_Top is
     signal es_ifd_imm : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     signal es_in_port_in : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     signal es_idex_rd : STD_LOGIC_VECTOR(2 downto 0) := (others => '0');
-    signal es_rsrc1_in : STD_LOGIC_VECTOR(2 downto 0) := (others => '0');
-    signal es_rsrc2_in : STD_LOGIC_VECTOR(2 downto 0) := (others => '0');  	 
+    signal es_rsrc1_in : STD_LOGIC_VECTOR(2 downto 0) := (others => '0');  
     signal es_is_immediate : STD_LOGIC := '0';
     signal es_reg_write_in : STD_LOGIC := '0';
     signal es_mem_read_in : STD_LOGIC := '0';
@@ -471,8 +463,7 @@ architecture Structural of Processor_Top is
 	 signal swap_phase_next_ex_mem2 : STD_LOGIC := '0';
 	 signal reg_write_ex_mem2 : STD_LOGIC := '0';
 	 signal is_call_ex_mem2 : STD_LOGIC := '0';
-	 signal is_input_ex_mem2 : STD_LOGIC := '0';	
-	 signal is_hlt_ex_mem2 : STD_LOGIC := '0'; 
+	 signal is_input_ex_mem2 : STD_LOGIC := '0';	 
 	 signal is_ret_mem_wb1 : STD_LOGIC := '0';
 	 signal is_rti_mem_wb1 : STD_LOGIC := '0';
 	 signal rti_phase_mem_wb1 : STD_LOGIC := '0';
@@ -596,7 +587,7 @@ begin
         );
     
     -- Execute Stage and Forwarding Unit Instantiation
-    Execute_Stage: ex_stage
+    Ex_Stage: ex_stage
       port map(
         clk => clk,
         rst => rst,
@@ -706,49 +697,7 @@ begin
         is_int_in => es_is_int_out,
         is_ret_in => es_is_ret_out,
         is_rti_in => es_is_rti_out,
-		  alu_result_out => alu_result_ex_mem2,
-        rdata2_out => r_data2_ex_mem2,
-        in_port_out => input_port_data_ex_mem2,
-        rsrc1_out => rsrc1_ex_mem2,
-        rdst_out => rdst_ex_mem2,
-        is_hult_out => is_hlt_ex_mem2,
-        is_call_out => is_call_ex_mem2,
-        reg_write_out => reg_write_ex_mem2,
-        swap_phase_out => swap_phase_previous_ex_mem2,
-        is_swap_out => is_swap_ex_mem2,
-        is_in_out => is_input_ex_mem2,
-        out_enable_out => out_enable_ex_mem2,
-        mem_to_reg_out => mem_to_reg_ex_mem2,
-        mem_read_out => mem_read_ex_mem2,
-        mem_write_out => mem_write_ex_mem2,
-        int_phase_out => int_phase_ex_mem2,
-        rti_phase_out => rti_phase_ex_mem2,
-        is_pop_out => is_pop_ex_mem2,
-        is_push_out => is_push_ex_mem2,
-        alu_addr_out => alu_address_ex_mem2,
-        is_int_out => is_int_ex_mem2,
-        is_ret_out => is_ret_ex_mem2,
-        is_rti_out => is_rti_ex_mem2
-      );
-		
-	 Forward_Unit: Forwarding_Unit 
-      port map (
-        ID_EX_RegRs => es_rsrc1_in,
-        ID_EX_RegRt => es_rsrc2_in,
-        EX_MEM_RegWrite => reg_write_ex_mem2,
-        EX_MEM_DestReg => rdst_ex_mem2,
-        EX_MEM_Rsrc1 => rsrc1_ex_mem2,
-        EX_MEM_is_swap => is_swap_ex_mem2,
-        EX_MEM_is_in => is_input_ex_mem2,
-        MEM_WB_RegWrite => reg_write_mem_wb2,
-        MEM_WB_DestReg => rdst_mem_wb2,
-        MEM_WB_Rsrc1 => rsrc1_mem_wb2,
-        MEM_WB_is_swap => is_swap_mem_wb2,
-        MEM_WB_is_in => is_input_mem_wb2,
-        MEM_WB_mem_to_reg => mem_to_reg_mem_wb2,
-        ForwardA => es_forwardA,
-        ForwardB => es_forwardB
-      );
+      )
     
     -- Memory Stage Instantiation
     Mem_Stage: Memory_Stage
