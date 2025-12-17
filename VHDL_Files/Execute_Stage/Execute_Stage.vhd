@@ -16,9 +16,6 @@ entity ex_stage is
   port (
     clk                : in  std_logic;
     rst                : in  std_logic;
-    -- for ex_mem register
-    ex_mem_reg_enable  : in  std_logic;
-    ex_mem_reg_flush   : in  std_logic;
 
     -- Inputs from ID/EX pipeline register
     idex_rdata1        : in  std_logic_vector(31 downto 0);
@@ -84,6 +81,9 @@ entity ex_stage is
     is_call_out        : out std_logic;
     is_swap_out        : out std_logic;
     is_in_out          : out std_logic;
+    is_pop_out         : out std_logic;
+    is_push_out        : out std_logic;
+
     swap_phase_out     : out std_logic;
     out_enable_out     : out std_logic;
     mem_to_reg_out     : out std_logic;
@@ -93,6 +93,10 @@ entity ex_stage is
     int_phase          : out std_logic;
     rti_phase          : out std_logic;
     exmem_immediate    : out std_logic_vector(31 downto 0); -- for LDM  Rdst, Imm
+    alu_addr_out      : out std_logic;
+    is_int_out         : out std_logic;
+    is_ret_out         : out std_logic;
+    is_rti_out         : out std_logic;
 
     -- flags to propagate
     ex_flags_z         : out std_logic;
@@ -103,64 +107,7 @@ end entity;
 
 architecture rtl of ex_stage is
 
-  component EX_MEM_Register is
-    port (
-      -- control signals
-      clk            : in  std_logic;
-      reset          : in  std_logic;
-      enable         : in  STD_LOGIC;
-      flush_seg      : in  STD_LOGIC;
-      -- input data signals
-      alu_result_in  : in  std_logic_vector(31 downto 0);
-      rdata2_in      : in  std_logic_vector(31 downto 0);
-      in_port_in     : in  std_logic_vector(31 downto 0);
-      rsrc1_in       : in  std_logic_vector(2 downto 0);
-      rdst_in        : in  std_logic_vector(2 downto 0);
-      is_hult_in     : in  std_logic;
-      is_call_in     : in  std_logic;
-      reg_write_in   : in  std_logic;
-      swap_phase_in  : in  std_logic;
-      is_swap_in     : in  std_logic;
-      is_in_in       : in  std_logic;
-      out_enable_in  : in  std_logic;
-      mem_to_reg_in  : in  std_logic;
-      mem_read_in    : in  std_logic;
-      meme_write_in  : in  std_logic;
-      int_phase_in   : in  std_logic;
-      rti_phase_in   : in  std_logic;
-      is_pop_in      : in  std_logic;
-      is_push_in     : in  std_logic;
-      alu_addr_in    : in  std_logic;
-      is_int_in      : in  std_logic;
-      is_ret_in      : in  std_logic;
-      is_rti_in      : in  std_logic;
-      -- output data signals
-      alu_result_out : out std_logic_vector(31 downto 0);
-      rdata2_out     : out std_logic_vector(31 downto 0);
-      in_port_out    : out std_logic_vector(31 downto 0);
-      rsrc1_out      : out std_logic_vector(2 downto 0);
-      rdst_out       : out std_logic_vector(2 downto 0);
-      is_hult_out    : out std_logic;
-      is_call_out    : out std_logic;
-      reg_write_out  : out std_logic;
-      swap_phase_out : out std_logic;
-      is_swap_out    : out std_logic;
-      is_in_out      : out std_logic;
-      out_enable_out : out std_logic;
-      mem_to_reg_out : out std_logic;
-      mem_read_out   : out std_logic;
-      mem_write_out  : out std_logic;
-      int_phase_out  : out std_logic;
-      rti_phase_out  : out std_logic;
-      is_pop_out     : out std_logic;
-      is_push_out    : out std_logic;
-      alu_addr_out   : out std_logic;
-      is_int_out     : out std_logic;
-      is_ret_out     : out std_logic;
-      is_rti_out     : out std_logic
-
-    );
-  end component;
+  
 
   -- ALU op encoding (Match these with your control unit)
   constant ALU_ADD  : std_logic_vector(3 downto 0) := "0001";
@@ -322,7 +269,7 @@ begin
         v_carry := '0';
 
       when ALU_IN =>
-        v_res := v_a; -- Pass through (Assuming IN data is on opA/opB bus)
+        v_res := unsigned(in_port_in); -- Pass through (Assuming IN data is on opA/opB bus)
         v_carry := '0';
 
       when ALU_MOV =>
@@ -421,64 +368,18 @@ begin
   int_phase          <= int_phase_s;
   rti_phase          <= rti_phase_s;
   exmem_immediate  <= ifd_imm; -- for LDM  Rdst, Imm
+  alu_addr_out     <= alu_addr_in;
+  is_pop_out        <= is_pop_in;
+  is_push_out       <= is_push_in;
+  in_port_out      <= in_port_in;
+  is_int_out       <= is_int_in;
+  is_ret_out       <= is_ret_in;
+  is_rti_out       <= is_rti_in;
+
   -- Flag outputs
   ex_flags_z       <= z_flag;
   ex_flags_n       <= n_flag;
   ex_flags_c       <= c_flag;
 
-  -- ex_mem pipeline register instantiation
-  ex_mem_reg_inst: EX_MEM_Register
-    port map (
-      clk            => clk,
-      reset          => rst,
-      enable         => ex_mem_reg_enable,
-      flush_seg      => ex_mem_reg_flush,
-      alu_result_in  => alu_res_sig,
-      rdata2_in      => opB,
-      rsrc1_in       => rsrc1_in,
-      in_port_in     => in_port_in,
-      rdst_in        => idex_rd,
-      is_hult_in     => is_hult_in,
-      is_call_in     => is_call_in,
-      reg_write_in   => reg_write_in,
-      swap_phase_in  => swap_phase_in,
-      is_swap_in     => is_swap_in,
-      is_in_in       => is_in_in,
-      out_enable_in  => out_enable_in,
-      mem_to_reg_in  => mem_to_reg_in,
-      mem_read_in    => mem_read_in,
-      meme_write_in  => mem_write_in,
-      int_phase_in   => int_phase_s,
-      rti_phase_in   => rti_phase_s,
-      is_pop_in      => is_pop_in,
-      is_push_in     => is_push_in,
-      alu_addr_in    => alu_addr_in,
-      is_int_in      => is_int_in,
-      is_ret_in      => is_ret_in,
-      is_rti_in      => is_rti_in,
-
-      alu_result_out => open,
-      rdata2_out     => open,
-      rsrc1_out      => open,
-      rdst_out       => open,
-      in_port_out    => open,
-      is_hult_out    => open,
-      is_call_out    => open,
-      reg_write_out  => open,
-      swap_phase_out => open,
-      is_swap_out    => open,
-      is_in_out      => open,
-      out_enable_out => open,
-      mem_to_reg_out => open,
-      mem_read_out   => open,
-      mem_write_out  => open,
-      int_phase_out  => open,
-      rti_phase_out  => open,
-      is_pop_out     => open,
-      is_push_out    => open,
-      alu_addr_out   => open,
-      is_int_out     => open,
-      is_ret_out     => open,
-      is_rti_out     => open
-    );
+ 
 end architecture;

@@ -24,7 +24,7 @@ entity EX_MEM_Register is
     out_enable_in  : in  std_logic;
     mem_to_reg_in  : in  std_logic;
     mem_read_in    : in  std_logic;
-    meme_write_in  : in  std_logic;
+    mem_write_in  : in  std_logic;
     int_phase_in   : in  std_logic;
     rti_phase_in   : in  std_logic;
     is_pop_in      : in  std_logic;
@@ -129,7 +129,7 @@ begin
         out_enable_out <= out_enable_in;
         mem_to_reg_out <= mem_to_reg_in;
         mem_read_out <= mem_read_in;
-        mem_write_out <= meme_write_in;
+        mem_write_out <= mem_write_in;
         int_phase_out <= int_phase_in;
         rti_phase_out <= rti_phase_in;
         is_pop_out <= is_pop_in;
