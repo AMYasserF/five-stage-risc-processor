@@ -35,8 +35,7 @@ entity Processor_Top is
         wb_write_reg : in STD_LOGIC_VECTOR(2 downto 0);
         wb_write_data : in STD_LOGIC_VECTOR(31 downto 0);
         
-        -- Immediate value from IF/ID for Execute Stage
-        if_id_immediate : in STD_LOGIC_VECTOR(31 downto 0);
+
         
         -- Forwarding Unit inputs (external until forwarding unit is created)
         forward_ex_mem : in STD_LOGIC_VECTOR(31 downto 0);
@@ -521,7 +520,7 @@ begin
             id_ex_branchZ => idex_branchZ,
             id_ex_branchC => idex_branchC,
             id_ex_branchN => idex_branchN,
-            if_id_immediate => if_id_immediate,
+            if_id_immediate => instruction_decode_signal,
             forward_ex_mem => forward_ex_mem,
             forward_mem_wb => forward_mem_wb,
             forward_mux_a_sel => forward_mux_a_sel,
