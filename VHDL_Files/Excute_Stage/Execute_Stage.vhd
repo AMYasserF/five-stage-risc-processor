@@ -1,3 +1,4 @@
+-- vhdl-linter-disable type-resolved
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
@@ -73,7 +74,6 @@ entity Execute_Stage is
         ex_mem_write_reg       : out STD_LOGIC_VECTOR(2 downto 0);
         ex_mem_read_data2      : out STD_LOGIC_VECTOR(31 downto 0);
         ex_mem_alu_result      : out STD_LOGIC_VECTOR(31 downto 0);
-        ex_mem_pc_plus_1       : out STD_LOGIC_VECTOR(31 downto 0);
         
         -- Direct outputs (not to EX/MEM register)
         conditional_jump       : out STD_LOGIC;  -- OR of all conditional branches
@@ -294,7 +294,7 @@ begin
     
     -- Pass-through data
     ex_mem_read_data2 <= id_ex_read_data2;  -- For store operations
-    ex_mem_pc_plus_1  <= id_ex_pc_plus_1;   -- Pass PC+1 to memory stage
+  
     
     -- ALU result output
     ex_mem_alu_result <= alu_result_internal;

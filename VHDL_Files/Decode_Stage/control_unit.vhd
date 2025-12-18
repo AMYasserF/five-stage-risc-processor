@@ -1,3 +1,4 @@
+-- vhdl-linter-disable type-resolved
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.numeric_std.all;

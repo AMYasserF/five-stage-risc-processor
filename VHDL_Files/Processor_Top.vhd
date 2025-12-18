@@ -1,3 +1,4 @@
+-- vhdl-linter-disable type-resolved
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
@@ -34,38 +35,41 @@ entity Processor_Top is
         wb_write_reg : in STD_LOGIC_VECTOR(2 downto 0);
         wb_write_data : in STD_LOGIC_VECTOR(31 downto 0);
         
-        -- Pipeline control
-        previous_is_immediate : in STD_LOGIC;
+        -- Immediate value from IF/ID for Execute Stage
+        if_id_immediate : in STD_LOGIC_VECTOR(31 downto 0);
         
-        -- ID/EX Stage Outputs (to Execute Stage)
-        pc_ex : out STD_LOGIC_VECTOR(31 downto 0);
-        read_data1_ex : out STD_LOGIC_VECTOR(31 downto 0);
-        read_data2_ex : out STD_LOGIC_VECTOR(31 downto 0);
-        read_reg1_ex : out STD_LOGIC_VECTOR(2 downto 0);
-        write_reg_ex : out STD_LOGIC_VECTOR(2 downto 0);
-        mem_write_ex : out STD_LOGIC;
-        mem_read_ex : out STD_LOGIC;
-        mem_to_reg_ex : out STD_LOGIC;
-        alu_op_ex : out STD_LOGIC_VECTOR(3 downto 0);
-        out_enable_ex : out STD_LOGIC;
-        ccr_in_ex : out STD_LOGIC_VECTOR(1 downto 0);
-        is_swap_ex : out STD_LOGIC;
-        swap_phase_ex : out STD_LOGIC;
-        reg_write_ex : out STD_LOGIC;
-        is_immediate_ex : out STD_LOGIC;
-        is_call_ex : out STD_LOGIC;
-        hlt_ex : out STD_LOGIC;
-        is_int_ex : out STD_LOGIC;
-        is_in_ex : out STD_LOGIC;
-        is_pop_ex : out STD_LOGIC;
-        is_push_ex : out STD_LOGIC;
-        int_phase_ex : out STD_LOGIC;
-        is_rti_ex : out STD_LOGIC;
-        rti_phase_ex : out STD_LOGIC;
-        is_ret_ex : out STD_LOGIC;
-        branchZ_ex : out STD_LOGIC;
-        branchC_ex : out STD_LOGIC;
-        branchN_ex : out STD_LOGIC
+        -- Forwarding Unit inputs (external until forwarding unit is created)
+        forward_ex_mem : in STD_LOGIC_VECTOR(31 downto 0);
+        forward_mem_wb : in STD_LOGIC_VECTOR(31 downto 0);
+        forward_mux_a_sel : in STD_LOGIC_VECTOR(1 downto 0);
+        forward_mux_b_sel : in STD_LOGIC_VECTOR(1 downto 0);
+        
+        -- Outputs from Execute Stage to EX/MEM
+        ex_mem_rti_phase : out STD_LOGIC;
+        ex_mem_int_phase : out STD_LOGIC;
+        ex_mem_mem_write : out STD_LOGIC;
+        ex_mem_mem_read : out STD_LOGIC;
+        ex_mem_mem_to_reg : out STD_LOGIC;
+        ex_mem_out_enable : out STD_LOGIC;
+        ex_mem_is_swap : out STD_LOGIC;
+        ex_mem_swap_phase : out STD_LOGIC;
+        ex_mem_reg_write : out STD_LOGIC;
+        ex_mem_is_call : out STD_LOGIC;
+        ex_mem_is_ret : out STD_LOGIC;
+        ex_mem_is_push : out STD_LOGIC;
+        ex_mem_is_pop : out STD_LOGIC;
+        ex_mem_is_in : out STD_LOGIC;
+        ex_mem_is_int : out STD_LOGIC;
+        ex_mem_is_rti : out STD_LOGIC;
+        ex_mem_hlt : out STD_LOGIC;
+        ex_mem_read_reg1 : out STD_LOGIC_VECTOR(2 downto 0);
+        ex_mem_write_reg : out STD_LOGIC_VECTOR(2 downto 0);
+        ex_mem_read_data2 : out STD_LOGIC_VECTOR(31 downto 0);
+        ex_mem_alu_result : out STD_LOGIC_VECTOR(31 downto 0);
+        
+        -- Direct outputs from Execute Stage
+        conditional_jump : out STD_LOGIC;
+        pc_plus_2 : out STD_LOGIC_VECTOR(31 downto 0)
     );
 end Processor_Top;
 
@@ -118,10 +122,8 @@ architecture Structural of Processor_Top is
             previous_is_immediate : in STD_LOGIC;
             read_data1 : out STD_LOGIC_VECTOR(31 downto 0);
             read_data2 : out STD_LOGIC_VECTOR(31 downto 0);
-            opcode : out STD_LOGIC_VECTOR(6 downto 0);
             rd : out STD_LOGIC_VECTOR(2 downto 0);
             rs1 : out STD_LOGIC_VECTOR(2 downto 0);
-            rs2 : out STD_LOGIC_VECTOR(2 downto 0);
             mem_write : out STD_LOGIC;
             mem_read : out STD_LOGIC;
             mem_to_reg : out STD_LOGIC;
@@ -214,6 +216,69 @@ architecture Structural of Processor_Top is
         );
     end component;
     
+    component Execute_Stage is
+        Port (
+            clk : in STD_LOGIC;
+            rst : in STD_LOGIC;
+            id_ex_read_data1 : in STD_LOGIC_VECTOR(31 downto 0);
+            id_ex_read_data2 : in STD_LOGIC_VECTOR(31 downto 0);
+            id_ex_pc_plus_1 : in STD_LOGIC_VECTOR(31 downto 0);
+            id_ex_read_reg1 : in STD_LOGIC_VECTOR(2 downto 0);
+            id_ex_write_reg : in STD_LOGIC_VECTOR(2 downto 0);
+            id_ex_mem_write : in STD_LOGIC;
+            id_ex_mem_read : in STD_LOGIC;
+            id_ex_mem_to_reg : in STD_LOGIC;
+            id_ex_alu_op : in STD_LOGIC_VECTOR(3 downto 0);
+            id_ex_out_enable : in STD_LOGIC;
+            id_ex_ccr_in : in STD_LOGIC_VECTOR(1 downto 0);
+            id_ex_is_swap : in STD_LOGIC;
+            id_ex_swap_phase : in STD_LOGIC;
+            id_ex_reg_write : in STD_LOGIC;
+            id_ex_is_immediate : in STD_LOGIC;
+            id_ex_is_call : in STD_LOGIC;
+            id_ex_is_ret : in STD_LOGIC;
+            id_ex_is_push : in STD_LOGIC;
+            id_ex_is_pop : in STD_LOGIC;
+            id_ex_is_in : in STD_LOGIC;
+            id_ex_hlt : in STD_LOGIC;
+            id_ex_is_int : in STD_LOGIC;
+            id_ex_int_phase : in STD_LOGIC;
+            id_ex_is_rti : in STD_LOGIC;
+            id_ex_rti_phase : in STD_LOGIC;
+            id_ex_branchZ : in STD_LOGIC;
+            id_ex_branchC : in STD_LOGIC;
+            id_ex_branchN : in STD_LOGIC;
+            if_id_immediate : in STD_LOGIC_VECTOR(31 downto 0);
+            forward_ex_mem : in STD_LOGIC_VECTOR(31 downto 0);
+            forward_mem_wb : in STD_LOGIC_VECTOR(31 downto 0);
+            forward_mux_a_sel : in STD_LOGIC_VECTOR(1 downto 0);
+            forward_mux_b_sel : in STD_LOGIC_VECTOR(1 downto 0);
+            ex_mem_rti_phase : out STD_LOGIC;
+            ex_mem_int_phase : out STD_LOGIC;
+            ex_mem_mem_write : out STD_LOGIC;
+            ex_mem_mem_read : out STD_LOGIC;
+            ex_mem_mem_to_reg : out STD_LOGIC;
+            ex_mem_out_enable : out STD_LOGIC;
+            ex_mem_is_swap : out STD_LOGIC;
+            ex_mem_swap_phase : out STD_LOGIC;
+            ex_mem_reg_write : out STD_LOGIC;
+            ex_mem_is_call : out STD_LOGIC;
+            ex_mem_is_ret : out STD_LOGIC;
+            ex_mem_is_push : out STD_LOGIC;
+            ex_mem_is_pop : out STD_LOGIC;
+            ex_mem_is_in : out STD_LOGIC;
+            ex_mem_is_int : out STD_LOGIC;
+            ex_mem_is_rti : out STD_LOGIC;
+            ex_mem_hlt : out STD_LOGIC;
+            ex_mem_read_reg1 : out STD_LOGIC_VECTOR(2 downto 0);
+            ex_mem_write_reg : out STD_LOGIC_VECTOR(2 downto 0);
+            ex_mem_read_data2 : out STD_LOGIC_VECTOR(31 downto 0);
+            ex_mem_alu_result : out STD_LOGIC_VECTOR(31 downto 0);
+            conditional_jump : out STD_LOGIC;
+            pc_plus_2 : out STD_LOGIC_VECTOR(31 downto 0)
+        );
+    end component;
+    
     -- Signals between Fetch and IF/ID
     signal instruction_fetch_signal : STD_LOGIC_VECTOR(31 downto 0);
     signal pc_plus_1_fetch_signal : STD_LOGIC_VECTOR(31 downto 0);
@@ -225,10 +290,8 @@ architecture Structural of Processor_Top is
     -- Signals between Decode and ID/EX (outputs from Decode Stage)
     signal read_data1_decode : STD_LOGIC_VECTOR(31 downto 0);
     signal read_data2_decode : STD_LOGIC_VECTOR(31 downto 0);
-    signal opcode_decode : STD_LOGIC_VECTOR(6 downto 0);
     signal rd_decode : STD_LOGIC_VECTOR(2 downto 0);
     signal rs1_decode : STD_LOGIC_VECTOR(2 downto 0);
-    signal rs2_decode : STD_LOGIC_VECTOR(2 downto 0);
     signal mem_write_decode : STD_LOGIC;
     signal mem_read_decode : STD_LOGIC;
     signal mem_to_reg_decode : STD_LOGIC;
@@ -254,6 +317,36 @@ architecture Structural of Processor_Top is
     signal branchN_decode : STD_LOGIC;
     signal unconditional_branch_decode : STD_LOGIC;
     signal pc_plus_1_from_decode : STD_LOGIC_VECTOR(31 downto 0);
+    
+    -- Signals from ID/EX to Execute Stage
+    signal idex_pc_plus_1 : STD_LOGIC_VECTOR(31 downto 0);
+    signal idex_read_data1 : STD_LOGIC_VECTOR(31 downto 0);
+    signal idex_read_data2 : STD_LOGIC_VECTOR(31 downto 0);
+    signal idex_read_reg1 : STD_LOGIC_VECTOR(2 downto 0);
+    signal idex_write_reg : STD_LOGIC_VECTOR(2 downto 0);
+    signal idex_mem_write : STD_LOGIC;
+    signal idex_mem_read : STD_LOGIC;
+    signal idex_mem_to_reg : STD_LOGIC;
+    signal idex_alu_op : STD_LOGIC_VECTOR(3 downto 0);
+    signal idex_out_enable : STD_LOGIC;
+    signal idex_ccr_in : STD_LOGIC_VECTOR(1 downto 0);
+    signal idex_is_swap : STD_LOGIC;
+    signal idex_swap_phase : STD_LOGIC;
+    signal idex_reg_write : STD_LOGIC;
+    signal idex_is_immediate : STD_LOGIC;
+    signal idex_is_call : STD_LOGIC;
+    signal idex_hlt : STD_LOGIC;
+    signal idex_is_int : STD_LOGIC;
+    signal idex_is_in : STD_LOGIC;
+    signal idex_is_pop : STD_LOGIC;
+    signal idex_is_push : STD_LOGIC;
+    signal idex_int_phase : STD_LOGIC;
+    signal idex_is_rti : STD_LOGIC;
+    signal idex_rti_phase : STD_LOGIC;
+    signal idex_is_ret : STD_LOGIC;
+    signal idex_branchZ : STD_LOGIC;
+    signal idex_branchC : STD_LOGIC;
+    signal idex_branchN : STD_LOGIC;
     
 begin
     
@@ -299,13 +392,11 @@ begin
             wb_write_enable => wb_write_enable,
             wb_write_reg => wb_write_reg,
             wb_write_data => wb_write_data,
-            previous_is_immediate => previous_is_immediate,
+            previous_is_immediate => idex_is_immediate,  -- Feedback from ID/EX register
             read_data1 => read_data1_decode,
             read_data2 => read_data2_decode,
-            opcode => opcode_decode,
             rd => rd_decode,
             rs1 => rs1_decode,
-            rs2 => rs2_decode,
             mem_write => mem_write_decode,
             mem_read => mem_read_decode,
             mem_to_reg => mem_to_reg_decode,
@@ -367,34 +458,97 @@ begin
             branchZ_in => branchZ_decode,
             branchC_in => branchC_decode,
             branchN_in => branchN_decode,
-            pc_out_plus_1 => pc_ex,
-            read_data1_out => read_data1_ex,
-            read_data2_out => read_data2_ex,
-            read_reg1_out => read_reg1_ex,
-            write_reg_out => write_reg_ex,
-            mem_write_out => mem_write_ex,
-            mem_read_out => mem_read_ex,
-            mem_to_reg_out => mem_to_reg_ex,
-            alu_op_out => alu_op_ex,
-            out_enable_out => out_enable_ex,
-            ccr_in_out => ccr_in_ex,
-            is_swap_out => is_swap_ex,
-            swap_phase_out => swap_phase_ex,
-            reg_write_out => reg_write_ex,
-            is_immediate_out => is_immediate_ex,
-            is_call_out => is_call_ex,
-            hlt_out => hlt_ex,
-            is_int_out => is_int_ex,
-            is_in_out => is_in_ex,
-            is_pop_out => is_pop_ex,
-            is_push_out => is_push_ex,
-            int_phase_out => int_phase_ex,
-            is_rti_out => is_rti_ex,
-            rti_phase_out => rti_phase_ex,
-            is_ret_out => is_ret_ex,
-            branchZ_out => branchZ_ex,
-            branchC_out => branchC_ex,
-            branchN_out => branchN_ex
+            pc_out_plus_1 => idex_pc_plus_1,
+            read_data1_out => idex_read_data1,
+            read_data2_out => idex_read_data2,
+            read_reg1_out => idex_read_reg1,
+            write_reg_out => idex_write_reg,
+            mem_write_out => idex_mem_write,
+            mem_read_out => idex_mem_read,
+            mem_to_reg_out => idex_mem_to_reg,
+            alu_op_out => idex_alu_op,
+            out_enable_out => idex_out_enable,
+            ccr_in_out => idex_ccr_in,
+            is_swap_out => idex_is_swap,
+            swap_phase_out => idex_swap_phase,
+            reg_write_out => idex_reg_write,
+            is_immediate_out => idex_is_immediate,
+            is_call_out => idex_is_call,
+            hlt_out => idex_hlt,
+            is_int_out => idex_is_int,
+            is_in_out => idex_is_in,
+            is_pop_out => idex_is_pop,
+            is_push_out => idex_is_push,
+            int_phase_out => idex_int_phase,
+            is_rti_out => idex_is_rti,
+            rti_phase_out => idex_rti_phase,
+            is_ret_out => idex_is_ret,
+            branchZ_out => idex_branchZ,
+            branchC_out => idex_branchC,
+            branchN_out => idex_branchN
+        );
+    
+    -- ==================== Execute Stage ====================
+    Execute: Execute_Stage
+        port map (
+            clk => clk,
+            rst => rst,
+            id_ex_read_data1 => idex_read_data1,
+            id_ex_read_data2 => idex_read_data2,
+            id_ex_pc_plus_1 => idex_pc_plus_1,
+            id_ex_read_reg1 => idex_read_reg1,
+            id_ex_write_reg => idex_write_reg,
+            id_ex_mem_write => idex_mem_write,
+            id_ex_mem_read => idex_mem_read,
+            id_ex_mem_to_reg => idex_mem_to_reg,
+            id_ex_alu_op => idex_alu_op,
+            id_ex_out_enable => idex_out_enable,
+            id_ex_ccr_in => idex_ccr_in,
+            id_ex_is_swap => idex_is_swap,
+            id_ex_swap_phase => idex_swap_phase,
+            id_ex_reg_write => idex_reg_write,
+            id_ex_is_immediate => idex_is_immediate,
+            id_ex_is_call => idex_is_call,
+            id_ex_is_ret => idex_is_ret,
+            id_ex_is_push => idex_is_push,
+            id_ex_is_pop => idex_is_pop,
+            id_ex_is_in => idex_is_in,
+            id_ex_hlt => idex_hlt,
+            id_ex_is_int => idex_is_int,
+            id_ex_int_phase => idex_int_phase,
+            id_ex_is_rti => idex_is_rti,
+            id_ex_rti_phase => idex_rti_phase,
+            id_ex_branchZ => idex_branchZ,
+            id_ex_branchC => idex_branchC,
+            id_ex_branchN => idex_branchN,
+            if_id_immediate => if_id_immediate,
+            forward_ex_mem => forward_ex_mem,
+            forward_mem_wb => forward_mem_wb,
+            forward_mux_a_sel => forward_mux_a_sel,
+            forward_mux_b_sel => forward_mux_b_sel,
+            ex_mem_rti_phase => ex_mem_rti_phase,
+            ex_mem_int_phase => ex_mem_int_phase,
+            ex_mem_mem_write => ex_mem_mem_write,
+            ex_mem_mem_read => ex_mem_mem_read,
+            ex_mem_mem_to_reg => ex_mem_mem_to_reg,
+            ex_mem_out_enable => ex_mem_out_enable,
+            ex_mem_is_swap => ex_mem_is_swap,
+            ex_mem_swap_phase => ex_mem_swap_phase,
+            ex_mem_reg_write => ex_mem_reg_write,
+            ex_mem_is_call => ex_mem_is_call,
+            ex_mem_is_ret => ex_mem_is_ret,
+            ex_mem_is_push => ex_mem_is_push,
+            ex_mem_is_pop => ex_mem_is_pop,
+            ex_mem_is_in => ex_mem_is_in,
+            ex_mem_is_int => ex_mem_is_int,
+            ex_mem_is_rti => ex_mem_is_rti,
+            ex_mem_hlt => ex_mem_hlt,
+            ex_mem_read_reg1 => ex_mem_read_reg1,
+            ex_mem_write_reg => ex_mem_write_reg,
+            ex_mem_read_data2 => ex_mem_read_data2,
+            ex_mem_alu_result => ex_mem_alu_result,
+            conditional_jump => conditional_jump,
+            pc_plus_2 => pc_plus_2
         );
     
 end Structural;
