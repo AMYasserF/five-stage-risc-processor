@@ -123,7 +123,6 @@ architecture Behavioral of Execute_Stage is
             alu_Z               : in  STD_LOGIC;
             alu_C               : in  STD_LOGIC;
             alu_N               : in  STD_LOGIC;
-            current_ccr_val     : in  STD_LOGIC_VECTOR(31 downto 0);
             stack_data_in       : in  STD_LOGIC_VECTOR(31 downto 0);
             conditional_branchZ : in  STD_LOGIC;
             conditional_branchC : in  STD_LOGIC;
@@ -228,7 +227,6 @@ begin
             alu_Z               => alu_zero_flag,
             alu_C               => alu_carry_flag,
             alu_N               => alu_neg_flag,
-            current_ccr_val     => ccr_register_out,
             stack_data_in       => (others => '0'),  -- TODO: Connect to stack/memory data
             conditional_branchZ => cond_branchZ,
             conditional_branchC => cond_branchC,
