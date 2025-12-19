@@ -14,8 +14,6 @@ entity CCR_Mux is
         alu_C               : in  STD_LOGIC;
         alu_N               : in  STD_LOGIC;
         
-        -- Source 01: Current Register Value (Feedback)
-        current_ccr_val     : in  STD_LOGIC_VECTOR(31 downto 0);
         
         -- Source 10: Stack/Memory Data (Full 32-bit)
         stack_data_in       : in  STD_LOGIC_VECTOR(31 downto 0);
@@ -44,10 +42,9 @@ begin
     alu_constructed_word(31 downto 3)  <= (others => '0');
 
     -- Logic for "01" Case: Hold current value but Clear flags if Branch signal is active
-    process(current_ccr_val, conditional_branchZ, conditional_branchC, conditional_branchN)
+    process(conditional_branchZ, conditional_branchC, conditional_branchN)
     begin
         -- Default: Copy current value
-        held_val_with_clear <= current_ccr_val;
         
         -- If Conditional Branch on Zero is active, Clear Z flag (Bit 0)
         if conditional_branchZ = '1' then
