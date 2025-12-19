@@ -906,7 +906,7 @@ begin
         rst => rst,
         idex_rdata1 => idex_read_data1,
         idex_rdata2 => idex_read_data2,
-        ifd_imm => ifid_instruction(15 downto 0) & x"0000",  -- Immediate from instruction
+        ifd_imm => ifid_instruction,  -- Immediate from instruction
         in_port_in => in_port,
         idex_rd => idex_write_reg,
         rsrc1_in => idex_read_reg1,
