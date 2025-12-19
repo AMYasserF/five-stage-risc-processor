@@ -33,7 +33,6 @@ entity decode_stage is
         read_data2            : out STD_LOGIC_VECTOR(31 downto 0);  -- Rs2 data
         
         -- Decoded fields
-        opcode                : out STD_LOGIC_VECTOR(6 downto 0);   -- [31:25]
         rd                    : out STD_LOGIC_VECTOR(2 downto 0);   -- [24:22]
         rs1                   : out STD_LOGIC_VECTOR(2 downto 0);   -- [21:19]
         rs2                   : out STD_LOGIC_VECTOR(2 downto 0);   -- [18:16]
@@ -138,7 +137,6 @@ begin
     instruction_rs2    <= instruction(18 downto 16);  -- Rs2 [18:16]
     
     -- Output decoded fields
-    opcode <= instruction_opcode;
     rd     <= instruction_rd;
     rs1    <= instruction_rs1;
     rs2    <= instruction_rs2;
