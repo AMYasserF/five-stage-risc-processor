@@ -291,6 +291,34 @@ architecture Structural of Processor_Top is
             ForwardB        : out STD_LOGIC_VECTOR(3 downto 0)
         );
     end component;
+
+    component Hazard_Detection_Unit is
+    port(
+        mem_mem_read : in std_logic; --Fetch_Memory use
+	    mem_mem_write : in std_logic; --Fetch_Memory use
+	    mem_is_pop : in std_logic; --Pop load use
+	    mem_rdst : in std_logic_vector(2 downto 0); --Pop load use
+	    ex_rsrc1 : in std_logic_vector(2 downto 0); --Pop load use
+	    ex_rsrc2 : in std_logic_vector(2 downto 0); --Pop load use
+	    ex_is_conditional : in std_logic; --Conditional jump 
+	    ex_has_one_operand : in std_logic; --Pop load use
+	    ex_has_two_operands : in std_logic; --Pop load use
+	    mem_is_int : in std_logic; --Interrupt
+	    mem_is_ret : in std_logic; --Return
+	    mem_is_rti : in std_logic; --Return interrupt
+	    wb_is_swap : in std_logic; --Swap
+	    wb_swap_phase : in std_logic; --Swap
+	    mem_int_phase : in std_logic_vector(1 downto 0); --Interrupt
+	    mem_rti_phase : in std_logic; --Return interrupt
+	    if_flush : out std_logic; --Fetch_Memory use / Conditional jump / Return / Interrupt / Return interrupt
+	    id_flush : out std_logic; --Return / Interrupt / Return interrupt
+	    ex_flush : out std_logic; --Return
+	    if_id_enable : out std_logic; --Swap
+	    id_ex_enable : out std_logic; --Swap
+	    ex_mem_enable : out std_logic; --Pop load use / Swap
+	    pc_enable : out std_logic --Fetch_Memory use
+    );
+    end component;
     
     component EX_MEM_Register is
         Port (
@@ -626,7 +654,11 @@ architecture Structural of Processor_Top is
     -- Input/Output Port signals
     signal input_port_registered : STD_LOGIC_VECTOR(31 downto 0);  -- Registered input
     signal output_port_registered : STD_LOGIC_VECTOR(31 downto 0); -- Registered output
-    signal output_port_enable : STD_LOGIC;                         -- Enable for output register
+    signal output_port_enable : STD_LOGIC; -- Enable for output register
+    
+    signal unused : STD_LOGIC := '0';
+    signal unused_2bits : STD_LOGIC := "00";
+    signal unused_3bits : STD_LOGIC_VECTOR(2 downto 0) := "000";
     
 begin
     
@@ -714,6 +746,33 @@ begin
             ForwardA        => forward_a,
             ForwardB        => forward_b
         );
+
+    HDU: Hazard_Detection_Unit
+       port map (
+            mem_mem_read => exmem_mem_read,
+	        mem_mem_write => exmem_mem_write,
+	        mem_is_pop => exmem_is_pop,
+	        mem_rdst => exmem_write_reg,
+	        ex_rsrc1 => idex_read_reg1,
+	        ex_rsrc2 => unused_3bits,
+	        ex_is_conditional => conditional_jump,
+	        ex_has_one_operand => unused,
+	        ex_has_two_operands => unused,
+	        mem_is_int => exmem_is_int,
+	        mem_is_ret => exmem_is_ret,
+	        mem_is_rti => exmem_is_rti,
+	        wb_is_swap => memwb_is_swap,
+	        wb_swap_phase => memwb_swap_phase,
+	        mem_int_phase => unused_2bits
+	        mem_rti_phase => exmem_rti_phase,
+	        if_flush => ifid_flush,
+	        id_flush => unused,
+	        ex_flush => unused,
+	        if_id_enable => ifid_enable,
+	        id_ex_enable => unused,
+	        ex_mem_enable => unused,
+	        pc_enable => pc_enable
+       );
     
     Fetch: Fetch_Stage
         port map (
