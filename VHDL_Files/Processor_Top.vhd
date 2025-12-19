@@ -244,6 +244,7 @@ architecture Structural of Processor_Top is
             forward_mem_wb : in STD_LOGIC_VECTOR(31 downto 0);
             forward_mux_a_sel : in STD_LOGIC_VECTOR(1 downto 0);
             forward_mux_b_sel : in STD_LOGIC_VECTOR(1 downto 0);
+            input_port : in STD_LOGIC_VECTOR(31 downto 0);
             ex_mem_rti_phase : out STD_LOGIC;
             ex_mem_int_phase : out STD_LOGIC;
             ex_mem_mem_write : out STD_LOGIC;
@@ -265,6 +266,7 @@ architecture Structural of Processor_Top is
             ex_mem_write_reg : out STD_LOGIC_VECTOR(2 downto 0);
             ex_mem_read_data2 : out STD_LOGIC_VECTOR(31 downto 0);
             ex_mem_alu_result : out STD_LOGIC_VECTOR(31 downto 0);
+            ex_mem_input_port_data : out STD_LOGIC_VECTOR(31 downto 0);
             conditional_jump : out STD_LOGIC;
             pc_plus_2 : out STD_LOGIC_VECTOR(31 downto 0)
         );
@@ -316,6 +318,7 @@ architecture Structural of Processor_Top is
             ex_write_reg : in STD_LOGIC_VECTOR(2 downto 0);
             ex_read_data2 : in STD_LOGIC_VECTOR(31 downto 0);
             ex_alu_result : in STD_LOGIC_VECTOR(31 downto 0);
+            ex_input_port_data : in STD_LOGIC_VECTOR(31 downto 0);
             ex_pc_plus_1 : in STD_LOGIC_VECTOR(31 downto 0);
             mem_rti_phase : out STD_LOGIC;
             mem_int_phase : out STD_LOGIC;
@@ -339,6 +342,7 @@ architecture Structural of Processor_Top is
             mem_write_reg : out STD_LOGIC_VECTOR(2 downto 0);
             mem_read_data2 : out STD_LOGIC_VECTOR(31 downto 0);
             mem_alu_result : out STD_LOGIC_VECTOR(31 downto 0);
+            mem_input_port_data : out STD_LOGIC_VECTOR(31 downto 0);
             mem_pc_plus_1 : out STD_LOGIC_VECTOR(31 downto 0)
         );
     end component;
@@ -448,6 +452,25 @@ architecture Structural of Processor_Top is
         );
     end component;
     
+    component Input_Port_Register is
+        Port (
+            clk : in STD_LOGIC;
+            rst : in STD_LOGIC;
+            data_in : in STD_LOGIC_VECTOR(31 downto 0);
+            data_out : out STD_LOGIC_VECTOR(31 downto 0)
+        );
+    end component;
+    
+    component Output_Port_Register is
+        Port (
+            clk : in STD_LOGIC;
+            rst : in STD_LOGIC;
+            enable : in STD_LOGIC;
+            data_in : in STD_LOGIC_VECTOR(31 downto 0);
+            data_out : out STD_LOGIC_VECTOR(31 downto 0)
+        );
+    end component;
+    
     -- Signals between Fetch and IF/ID
     signal instruction_fetch_signal : STD_LOGIC_VECTOR(31 downto 0);
     signal pc_plus_1_fetch_signal : STD_LOGIC_VECTOR(31 downto 0);
@@ -540,7 +563,11 @@ architecture Structural of Processor_Top is
     signal exmem_write_reg : STD_LOGIC_VECTOR(2 downto 0);
     signal exmem_read_data2 : STD_LOGIC_VECTOR(31 downto 0);
     signal exmem_alu_result : STD_LOGIC_VECTOR(31 downto 0);
+    signal exmem_input_port_data : STD_LOGIC_VECTOR(31 downto 0);
     signal exmem_pc_plus_1 : STD_LOGIC_VECTOR(31 downto 0);
+    
+    -- Signals from Execute Stage outputs (before EX/MEM register)
+    signal execute_input_port_data : STD_LOGIC_VECTOR(31 downto 0);
     
     -- Signals from Memory Stage to MEM/WB
     signal mem_is_ret : STD_LOGIC;
@@ -596,17 +623,27 @@ architecture Structural of Processor_Top is
     signal forward_ex_mem_data : STD_LOGIC_VECTOR(31 downto 0);
     signal forward_mem_wb_data : STD_LOGIC_VECTOR(31 downto 0);
     
+    -- Input/Output Port signals
+    signal input_port_registered : STD_LOGIC_VECTOR(31 downto 0);  -- Registered input
+    signal output_port_registered : STD_LOGIC_VECTOR(31 downto 0); -- Registered output
+    signal output_port_enable : STD_LOGIC;                         -- Enable for output register
+    
 begin
     
     -- Connect writeback outputs
     wb_write_enable <= memwb_reg_write;
     wb_write_reg <= wb_write_back_register;
     wb_write_data <= wb_write_back_data;
-    output_port <= wb_output_port_data;
+    
+    -- Output port gets value from output register
+    output_port <= output_port_registered;
+    
+    -- Output port enable when OUT instruction reaches writeback
+    output_port_enable <= memwb_out_enable;
     
     -- Forwarding data selection for EX/MEM stage
     -- Select appropriate data based on forwarding control signals
-    process(forward_a, forward_b, exmem_alu_result, exmem_read_data2, input_port)
+    process(forward_a, forward_b, exmem_alu_result, exmem_read_data2, exmem_input_port_data)
     begin
         -- Default to ALU result for EX/MEM forwarding
         forward_ex_mem_data <= exmem_alu_result;
@@ -623,7 +660,7 @@ begin
             forward_ex_mem_data <= exmem_alu_result;
         elsif (forward_a = "0100" or forward_b = "0100") then
             -- 0100: Forward EX/MEM input port
-            forward_ex_mem_data <= input_port;
+            forward_ex_mem_data <= exmem_input_port_data;
         else
             forward_ex_mem_data <= exmem_alu_result;
         end if;
@@ -854,6 +891,7 @@ begin
             forward_mem_wb => forward_mem_wb_data,
             forward_mux_a_sel => forward_a(1 downto 0),
             forward_mux_b_sel => forward_b(1 downto 0),
+            input_port => input_port_registered,
             ex_mem_rti_phase => ex_mem_rti_phase,
             ex_mem_int_phase => ex_mem_int_phase,
             ex_mem_mem_write => ex_mem_mem_write,
@@ -875,6 +913,7 @@ begin
             ex_mem_write_reg => ex_mem_write_reg,
             ex_mem_read_data2 => ex_mem_read_data2,
             ex_mem_alu_result => ex_mem_alu_result,
+            ex_mem_input_port_data => execute_input_port_data,
             conditional_jump => conditional_jump,
             pc_plus_2 => pc_plus_2
         );
@@ -906,6 +945,7 @@ begin
             ex_write_reg => ex_mem_write_reg,
             ex_read_data2 => ex_mem_read_data2,
             ex_alu_result => ex_mem_alu_result,
+            ex_input_port_data => execute_input_port_data,
             ex_pc_plus_1 => idex_pc_plus_1,  -- Pass through PC+1
             mem_rti_phase => exmem_rti_phase,
             mem_int_phase => exmem_int_phase,
@@ -929,6 +969,7 @@ begin
             mem_write_reg => exmem_write_reg,
             mem_read_data2 => exmem_read_data2,
             mem_alu_result => exmem_alu_result,
+            mem_input_port_data => exmem_input_port_data,
             mem_pc_plus_1 => exmem_pc_plus_1
         );
     
@@ -960,7 +1001,7 @@ begin
             alu_result => exmem_alu_result,
             pc_data => exmem_pc_plus_1,
             ccr_data => ccr_register,
-            input_port_data => input_port,  -- Connected to entity input port
+            input_port_data => exmem_input_port_data,
             int_load_pc_out => int_load_pc_internal,
             rti_load_pc_out => rti_load_pc_internal,
             is_ret_out => mem_is_ret,
@@ -1035,6 +1076,27 @@ begin
             Write_Back_Data => wb_write_back_data,
             Write_Back_Register => wb_write_back_register,
             Swap_Phase_Next => wb_swap_phase_next
+        );
+    
+    -- ==================== Input Port Register ====================
+    -- Always latches external input port
+    Input_Port_Reg: Input_Port_Register
+        port map (
+            clk => clk,
+            rst => rst,
+            data_in => input_port,
+            data_out => input_port_registered
+        );
+    
+    -- ==================== Output Port Register ====================
+    -- Latches ALU result when OUT instruction reaches writeback
+    Output_Port_Reg: Output_Port_Register
+        port map (
+            clk => clk,
+            rst => rst,
+            enable => output_port_enable,
+            data_in => wb_output_port_data,
+            data_out => output_port_registered
         );
     
 end Structural;

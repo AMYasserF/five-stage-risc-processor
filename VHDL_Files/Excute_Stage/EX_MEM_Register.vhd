@@ -35,6 +35,7 @@ entity EX_MEM_Register is
         ex_write_reg       : in  STD_LOGIC_VECTOR(2 downto 0);
         ex_read_data2      : in  STD_LOGIC_VECTOR(31 downto 0);
         ex_alu_result      : in  STD_LOGIC_VECTOR(31 downto 0);
+        ex_input_port_data : in  STD_LOGIC_VECTOR(31 downto 0);
         ex_pc_plus_1       : in  STD_LOGIC_VECTOR(31 downto 0);
         
         -- Registered outputs to Memory stage
@@ -62,6 +63,7 @@ entity EX_MEM_Register is
         mem_write_reg      : out STD_LOGIC_VECTOR(2 downto 0);
         mem_read_data2     : out STD_LOGIC_VECTOR(31 downto 0);
         mem_alu_result     : out STD_LOGIC_VECTOR(31 downto 0);
+        mem_input_port_data: out STD_LOGIC_VECTOR(31 downto 0);
         mem_pc_plus_1      : out STD_LOGIC_VECTOR(31 downto 0)
     );
 end EX_MEM_Register;
@@ -93,11 +95,12 @@ begin
             mem_is_rti     <= '0';
             
             -- Reset data
-            mem_read_reg1  <= (others => '0');
-            mem_write_reg  <= (others => '0');
-            mem_read_data2 <= (others => '0');
-            mem_alu_result <= (others => '0');
-            mem_pc_plus_1  <= (others => '0');
+            mem_read_reg1       <= (others => '0');
+            mem_write_reg       <= (others => '0');
+            mem_read_data2      <= (others => '0');
+            mem_alu_result      <= (others => '0');
+            mem_input_port_data <= (others => '0');
+            mem_pc_plus_1       <= (others => '0');
             
         elsif rising_edge(clk) then
             -- Register control signals
@@ -121,11 +124,12 @@ begin
             mem_is_rti     <= ex_is_rti;
             
             -- Register data
-            mem_read_reg1  <= ex_read_reg1;
-            mem_write_reg  <= ex_write_reg;
-            mem_read_data2 <= ex_read_data2;
-            mem_alu_result <= ex_alu_result;
-            mem_pc_plus_1  <= ex_pc_plus_1;
+            mem_read_reg1       <= ex_read_reg1;
+            mem_write_reg       <= ex_write_reg;
+            mem_read_data2      <= ex_read_data2;
+            mem_alu_result      <= ex_alu_result;
+            mem_input_port_data <= ex_input_port_data;
+            mem_pc_plus_1       <= ex_pc_plus_1;
         end if;
     end process;
     

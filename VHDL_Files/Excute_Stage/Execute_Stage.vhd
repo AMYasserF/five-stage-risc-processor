@@ -46,6 +46,9 @@ entity Execute_Stage is
         -- Immediate value from IF/ID Pipeline Register
         if_id_immediate        : in  STD_LOGIC_VECTOR(31 downto 0);
         
+        -- Input Port (from top module)
+        input_port             : in  STD_LOGIC_VECTOR(31 downto 0);
+        
         -- Forwarding inputs (will be connected to forwarding unit later)
         forward_ex_mem         : in  STD_LOGIC_VECTOR(31 downto 0);
         forward_mem_wb         : in  STD_LOGIC_VECTOR(31 downto 0);
@@ -74,6 +77,7 @@ entity Execute_Stage is
         ex_mem_write_reg       : out STD_LOGIC_VECTOR(2 downto 0);
         ex_mem_read_data2      : out STD_LOGIC_VECTOR(31 downto 0);
         ex_mem_alu_result      : out STD_LOGIC_VECTOR(31 downto 0);
+        ex_mem_input_port_data : out STD_LOGIC_VECTOR(31 downto 0);
         
         -- Direct outputs (not to EX/MEM register)
         conditional_jump       : out STD_LOGIC;  -- OR of all conditional branches
@@ -377,5 +381,8 @@ begin
     
     -- ALU result output
     ex_mem_alu_result <= alu_result_internal;
+    
+    -- Input port data output (for IN instruction)
+    ex_mem_input_port_data <= input_port;
     
 end Behavioral;

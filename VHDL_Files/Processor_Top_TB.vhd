@@ -67,7 +67,7 @@ architecture Behavioral of Processor_Top_TB is
     signal immediate_decode : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     signal alu_immediate : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     
-    signal input_port : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal input_port : STD_LOGIC_VECTOR(31 downto 0) := X"DEADBEEF";
     signal output_port : STD_LOGIC_VECTOR(31 downto 0);
     
     signal wb_write_enable : STD_LOGIC;
@@ -101,25 +101,52 @@ architecture Behavioral of Processor_Top_TB is
     -- Clock period
     constant clk_period : time := 10 ns;
     
-    -- Instruction memory (simplified)
-    type mem_array is array (0 to 15) of STD_LOGIC_VECTOR(31 downto 0);
+    -- Instruction memory (IN/OUT test)
+    type mem_array is array (0 to 31) of STD_LOGIC_VECTOR(31 downto 0);
     signal instruction_memory : mem_array := (
-        0 => X"00000004",  -- Start at address 4
-        1 => X"00000000",  -- NOP
-        2 => X"00000000",  -- NOP
-        3 => X"00000000",  -- NOP
-        4 => X"A4900000",  -- LDM R2, #5  (Load immediate 5 into R2)
-        5 => X"00000035",  -- Immediate value: 5
-        6 => X"A4D80000",  -- LDM R3, #3  (Load immediate 3 into R3)
-        7 => X"80000000",  -- Immediate value: 3
+        -- Address 0: Jump to program start location
+        0 => X"00000002",  -- Jump to address 2 (program start)
+        1 => X"00000000",  -- NOP (unused)
+        
+        -- Test PUSH and POP instructions
+        -- First, load some values into registers
+        2 => X"A4800000",  -- LDM R2, #0x1234 (opcode=0x52, rd=2)
+        3 => X"00001234",  -- immediate 0x1234
+        4 => X"00000000",  -- NOP
+        5 => X"00000000",  -- NOP
+        6 => X"00000000",  -- NOP
+        7 => X"00000000",  -- NOP
         8 => X"00000000",  -- NOP
-        9 => X"00000000",  -- NOP
-        10 => X"00000000",  -- NOP
-        11 => X"00000000",  -- NOP
-        12 => X"A2500000",  -- SUB R1, R3, R2  (R1 = R3 - R2 = 3 - 5 = -2, N flag should be 
-        13 => X"00000018",  -- NOP
-        14 => X"00000000",  -- NOP
-        15 => X"00000000",  -- NOP
+        
+        9 => X"A4C00000",  -- LDM R3, #0x5678 (opcode=0x52, rd=3)
+        10 => X"00005678", -- immediate 0x5678
+        11 => X"00000000", -- NOP
+        12 => X"00000000", -- NOP
+        13 => X"00000000", -- NOP
+        14 => X"00000000", -- NOP
+        15 => X"00000000", -- NOP
+        
+        -- PUSH R2 onto stack
+        16 => X"62100000", -- PUSH R2 (opcode=0x31, rs1=2)
+        17 => X"00000000", -- NOP
+        18 => X"00000000", -- NOP
+        19 => X"00000000", -- NOP
+        20 => X"00000000", -- NOP
+        21 => X"00000000", -- NOP
+        
+        -- PUSH R3 onto stack
+        22 => X"62180000", -- PUSH R3 (opcode=0x31, rs1=3)
+        23 => X"00000000", -- NOP
+        24 => X"00000000", -- NOP
+        25 => X"00000000", -- NOP
+        26 => X"00000000", -- NOP
+        27 => X"00000000", -- NOP
+        
+        -- POP into R4 (should get R3's value: 0x5678)
+        28 => X"65000000", -- POP R4 (opcode=0x32, rd=4)
+        29 => X"00000000", -- NOP
+        30 => X"00000000", -- NOP
+        31 => X"00000000", -- NOP
         others => X"00000000"
     );
     
@@ -178,8 +205,8 @@ begin
         wait for clk_period/2;
     end process;
     
-    -- Instruction memory read
-    mem_read_data <= instruction_memory(to_integer(unsigned(mem_address(3 downto 0))));
+    -- Instruction memory read (use 5 bits to support addresses 0-31)
+    mem_read_data <= instruction_memory(to_integer(unsigned(mem_address(4 downto 0))));
     
     -- Stimulus
     stimulus: process
@@ -191,8 +218,8 @@ begin
         -- Release reset
         rst <= '0';
         
-        -- Run for 30 cycles to see the ADD instruction complete
-        wait for clk_period * 30;
+        -- Run for 50 cycles to see all PUSH/POP instructions complete
+        wait for clk_period * 50;
         
         -- Stop simulation
         wait;

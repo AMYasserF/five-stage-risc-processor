@@ -1,5 +1,5 @@
 ; ===== FULL ISA TEST =====
-
+OUT R3
 NOP
 SETC
 

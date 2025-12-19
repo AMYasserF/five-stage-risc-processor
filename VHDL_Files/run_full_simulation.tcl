@@ -62,6 +62,10 @@ vcom -2008 Memory_Stage/Mem_Wb_Register.vhd
 puts "\n=== Compiling Writeback Stage ==="
 vcom -2008 Writeback_Stage/Write_Back.vhd
 
+puts "\n=== Compiling I/O Port Registers ==="
+vcom -2008 IO_Ports/Input_Port_Register.vhd
+vcom -2008 IO_Ports/Output_Port_Register.vhd
+
 puts "\n=== Compiling Forwarding Unit ==="
 vcom -2008 Forwarding_Unit.vhd
 
@@ -123,6 +127,24 @@ add wave -divider -height 25 "========== DECODE STAGE =========="
 puts "Adding Decode signals..."
 if {[catch {add wave -label "Read Data 1" -radix hex /Processor_Top_TB/UUT/read_data1_decode}]} {puts "  Warning: Read Data 1 not found"}
 if {[catch {add wave -label "Read Data 2" -radix hex /Processor_Top_TB/UUT/read_data2_decode}]} {puts "  Warning: Read Data 2 not found"}
+
+# ========================================
+# CONTROL UNIT OUTPUTS
+# ========================================
+add wave -divider -height 25 "========== CONTROL UNIT =========="
+puts "Adding Control Unit signals..."
+if {[catch {add wave -label ">>> Is PUSH <<<" /Processor_Top_TB/UUT/Decode/ctrl_unit/is_push}]} {puts "  Warning: Is PUSH not found"}
+if {[catch {add wave -label ">>> Is POP <<<" /Processor_Top_TB/UUT/Decode/ctrl_unit/is_pop}]} {puts "  Warning: Is POP not found"}
+if {[catch {add wave -label ">>> Mem Write <<<" /Processor_Top_TB/UUT/Decode/ctrl_unit/mem_write}]} {puts "  Warning: Mem Write not found"}
+if {[catch {add wave -label ">>> Mem Read <<<" /Processor_Top_TB/UUT/Decode/ctrl_unit/mem_read}]} {puts "  Warning: Mem Read not found"}
+if {[catch {add wave -label "Mem to Reg" /Processor_Top_TB/UUT/Decode/ctrl_unit/mem_to_reg}]} {puts "  Warning: Mem to Reg not found"}
+if {[catch {add wave -label "Reg Write" /Processor_Top_TB/UUT/Decode/ctrl_unit/reg_write}]} {puts "  Warning: Reg Write not found"}
+if {[catch {add wave -label "ALU Op" -radix hex /Processor_Top_TB/UUT/Decode/ctrl_unit/alu_op}]} {puts "  Warning: ALU Op not found"}
+if {[catch {add wave -label "Is Immediate" /Processor_Top_TB/UUT/Decode/ctrl_unit/is_immediate}]} {puts "  Warning: Is Immediate not found"}
+if {[catch {add wave -label "Is Call" /Processor_Top_TB/UUT/Decode/ctrl_unit/is_call}]} {puts "  Warning: Is Call not found"}
+if {[catch {add wave -label "Is Ret" /Processor_Top_TB/UUT/Decode/ctrl_unit/is_ret}]} {puts "  Warning: Is Ret not found"}
+if {[catch {add wave -label "Out Enable" /Processor_Top_TB/UUT/Decode/ctrl_unit/out_enable}]} {puts "  Warning: Out Enable not found"}
+if {[catch {add wave -label "Is Input" /Processor_Top_TB/UUT/Decode/ctrl_unit/is_in}]} {puts "  Warning: Is Input not found"}
 
 # ========================================
 # REGISTER FILE (R0-R7)
@@ -202,10 +224,17 @@ if {[catch {add wave -label "Mem Read" /Processor_Top_TB/UUT/exmem_mem_read}]} {
 add wave -divider -height 25 "========== MEMORY STAGE =========="
 puts "Adding Memory signals..."
 if {[catch {add wave -label "ALU Result (Input)" -radix hex /Processor_Top_TB/UUT/Memory/alu_result}]} {puts "  Warning: ALU Result not found"}
+if {[catch {add wave -label "Memory Address" -radix hex /Processor_Top_TB/UUT/Memory/mem_address}]} {puts "  Warning: Memory Address not found"}
+if {[catch {add wave -label "Memory Write Data" -radix hex /Processor_Top_TB/UUT/Memory/mem_write_data}]} {puts "  Warning: Memory Write Data not found"}
 if {[catch {add wave -label "Memory Data (Output)" -radix hex /Processor_Top_TB/UUT/Memory/mem_data_out}]} {puts "  Warning: Memory Data not found"}
-if {[catch {add wave -label "Memory Read" /Processor_Top_TB/UUT/Memory/mem_read}]} {puts "  Warning: Memory Read not found"}
-if {[catch {add wave -label "Memory Write" /Processor_Top_TB/UUT/Memory/mem_write}]} {puts "  Warning: Memory Write not found"}
-if {[catch {add wave -label "Stack Pointer (SP)" -radix hex /Processor_Top_TB/UUT/Memory/sp_current}]} {puts "  Warning: Stack Pointer not found"}
+if {[catch {add wave -label ">>> Memory Read Enable <<<" /Processor_Top_TB/UUT/Memory/actual_mem_read}]} {puts "  Warning: Memory Read not found"}
+if {[catch {add wave -label ">>> Memory Write Enable <<<" /Processor_Top_TB/UUT/Memory/actual_mem_write}]} {puts "  Warning: Memory Write not found"}
+if {[catch {add wave -label ">>> Stack Pointer (SP) <<<" -radix hex /Processor_Top_TB/UUT/Memory/sp_current}]} {puts "  Warning: Stack Pointer not found"}
+if {[catch {add wave -label "SP Next" -radix hex /Processor_Top_TB/UUT/Memory/sp_next}]} {puts "  Warning: SP Next not found"}
+if {[catch {add wave -label "SP Enable" /Processor_Top_TB/UUT/Memory/sp_enable}]} {puts "  Warning: SP Enable not found"}
+if {[catch {add wave -label "SP Mux Sel" /Processor_Top_TB/UUT/Memory/sp_mux_sel}]} {puts "  Warning: SP Mux Sel not found"}
+if {[catch {add wave -label "Is PUSH" /Processor_Top_TB/UUT/Memory/is_push}]} {puts "  Warning: Is PUSH not found"}
+if {[catch {add wave -label "Is POP" /Processor_Top_TB/UUT/Memory/is_pop}]} {puts "  Warning: Is POP not found"}
 
 # ========================================
 # MEM/WB REGISTER
@@ -226,6 +255,22 @@ puts "Adding Writeback signals..."
 if {[catch {add wave -label "Write Data (Mux Output)" -radix hex /Processor_Top_TB/UUT/wb_write_data}]} {puts "  Warning: Write Data not found"}
 if {[catch {add wave -label "Write Register Address" -radix unsigned /Processor_Top_TB/UUT/wb_write_reg}]} {puts "  Warning: Write Register Address not found"}
 if {[catch {add wave -label "Write Enable" /Processor_Top_TB/UUT/wb_write_enable}]} {puts "  Warning: Write Enable not found"}
+
+# ========================================
+# INPUT/OUTPUT PORTS
+# ========================================
+add wave -divider -height 30 "========== INPUT/OUTPUT PORTS =========="
+puts "Adding I/O Port signals..."
+if {[catch {add wave -label ">>> INPUT PORT (External) <<<" -radix hex /Processor_Top_TB/input_port}]} {puts "  Warning: input_port not found"}
+if {[catch {add wave -label "Input Port -> Execute Stage" -radix hex /Processor_Top_TB/UUT/Execute/input_port}]} {puts "  Warning: input_port to Execute not found"}
+if {[catch {add wave -label "Input Port Data (EX/MEM)" -radix hex /Processor_Top_TB/UUT/exmem_input_port_data}]} {puts "  Warning: exmem_input_port_data not found"}
+if {[catch {add wave -label "Input Port Data (MEM)" -radix hex /Processor_Top_TB/UUT/Memory/input_port_data}]} {puts "  Warning: Memory input_port_data not found"}
+if {[catch {add wave -label "Input Port Data (MEM/WB)" -radix hex /Processor_Top_TB/UUT/memwb_input_port_data}]} {puts "  Warning: memwb_input_port_data not found"}
+if {[catch {add wave -label "Input Port Data (WB)" -radix hex /Processor_Top_TB/UUT/Writeback/Input_Port_Data}]} {puts "  Warning: WB Input_Port_Data not found"}
+if {[catch {add wave -label "Is IN Instruction (MEM/WB)" /Processor_Top_TB/UUT/memwb_is_input}]} {puts "  Warning: memwb_is_input not found"}
+if {[catch {add wave -label ">>> OUTPUT PORT (External) <<<" -radix hex /Processor_Top_TB/output_port}]} {puts "  Warning: output_port not found"}
+if {[catch {add wave -label "Output Port Data (from WB)" -radix hex /Processor_Top_TB/UUT/wb_output_port_data}]} {puts "  Warning: wb_output_port_data not found"}
+if {[catch {add wave -label "Is OUT Instruction (MEM/WB)" /Processor_Top_TB/UUT/memwb_out_enable}]} {puts "  Warning: memwb_out_enable not found"}
 
 
 
@@ -256,6 +301,7 @@ puts "  EX/MEM:    ALU Result, Write Reg, Control Signals"
 puts "  MEMORY:    Address, Write Data, Read Data, Write/Read Enable, SP"
 puts "  MEM/WB:    ALU Result, Memory Data, Write Reg, Control Signals"
 puts "  WRITEBACK: Write Data, Write Address, Write Enable"
+puts "  I/O PORTS: Input Port (through pipeline), Output Port, IN/OUT enables"
 puts ""
 puts "Use 'wave zoom full' to see entire simulation"
 puts "Use 'do run_full_simulation.tcl' to re-run"

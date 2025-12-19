@@ -23,33 +23,50 @@ entity Write_Back is
 end entity;
 
 architecture a_Write_Back of Write_Back is
-  signal TwoRegsDataMux : std_logic_vector(31 downto 0) := (others => '0');
-  signal WriteBackMuxSelect : std_logic_vector(1 downto 0) := "00";
+  signal TwoRegsDataMux : std_logic_vector(31 downto 0);
+  signal WriteBackMuxSelect : std_logic_vector(1 downto 0);
 begin
   Swap_Phase_Next <= Is_Swap and not Swap_Phase;
   WriteBackMuxSelect <= Is_Input & MemToReg;
-  Output_Port_Data <= R_data2 when Is_Output='1'
+  
+  -- For OUT instruction, output the ALU result (which contains the register value passed through)
+  Output_Port_Data <= ALU_Result when Is_Output='1'
   else (others => '0');
   
-  with Swap_Phase select
-    Write_Back_Register <= 
-	   Rdst when '0',
-		Rsrc1 when '1',
-		(others => '0') when others;
-		
-  with Swap_Phase select
-    TwoRegsDataMux <= 
-	   ALU_Result when '0',
-		R_data2 when '1',
-		(others => '0') when others;
+  -- Write Back Register selection
+  process(Swap_Phase, Rdst, Rsrc1)
+  begin
+    if Swap_Phase = '0' then
+      Write_Back_Register <= Rdst;
+    elsif Swap_Phase = '1' then
+      Write_Back_Register <= Rsrc1;
+    else
+      Write_Back_Register <= (others => '0');
+    end if;
+  end process;
   
-  with WriteBackMuxSelect select
-    Write_Back_Data <=
-	   TwoRegsDataMux when "00",
-		Mem_Result when "01",
-		Input_Port_Data when "10",
-		Input_Port_Data when "11",
-		(others => '0') when others;
+  -- Two Register Data Mux (for SWAP)
+  process(Swap_Phase, ALU_Result, R_data2)
+  begin
+    if Swap_Phase = '0' then
+      TwoRegsDataMux <= ALU_Result;
+    elsif Swap_Phase = '1' then
+      TwoRegsDataMux <= R_data2;
+    else
+      TwoRegsDataMux <= (others => '0');
+    end if;
+  end process;
+  
+  -- Writeback Data Mux
+  process(WriteBackMuxSelect, TwoRegsDataMux, Mem_Result, Input_Port_Data)
+  begin
+    case WriteBackMuxSelect is
+      when "00" => Write_Back_Data <= TwoRegsDataMux;
+      when "01" => Write_Back_Data <= Mem_Result;
+      when "10" => Write_Back_Data <= Input_Port_Data;
+      when "11" => Write_Back_Data <= Input_Port_Data;
+      when others => Write_Back_Data <= (others => '0');
+    end case;
+  end process;
 		
-end a_Write_Back; 
-	 
+end a_Write_Back;
