@@ -16,32 +16,24 @@ entity Processor_Top is
         ifid_enable : in STD_LOGIC;
         ifid_flush : in STD_LOGIC;
         
-        -- Memory System Interface
+        -- Memory System Interface (for instruction fetch)
         mem_address : out STD_LOGIC_VECTOR(31 downto 0);
         mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);
         
-        -- From Execute/Memory stages (for PC control)
-        int_load_pc : in STD_LOGIC;
-        is_ret : in STD_LOGIC;
-        rti_load_pc : in STD_LOGIC;
-        is_call : in STD_LOGIC;
+        -- External control signals (for testing/control)
         is_conditional_jump : in STD_LOGIC;
         is_unconditional_jump : in STD_LOGIC;
         immediate_decode : in STD_LOGIC_VECTOR(31 downto 0);
         alu_immediate : in STD_LOGIC_VECTOR(31 downto 0);
         
-        -- From Writeback Stage
-        wb_write_enable : in STD_LOGIC;
-        wb_write_reg : in STD_LOGIC_VECTOR(2 downto 0);
-        wb_write_data : in STD_LOGIC_VECTOR(31 downto 0);
+        -- Input/Output Ports
+        input_port : in STD_LOGIC_VECTOR(31 downto 0);
+        output_port : out STD_LOGIC_VECTOR(31 downto 0);
         
-
-        
-        -- Forwarding Unit inputs (external until forwarding unit is created)
-        forward_ex_mem : in STD_LOGIC_VECTOR(31 downto 0);
-        forward_mem_wb : in STD_LOGIC_VECTOR(31 downto 0);
-        forward_mux_a_sel : in STD_LOGIC_VECTOR(1 downto 0);
-        forward_mux_b_sel : in STD_LOGIC_VECTOR(1 downto 0);
+        -- Writeback outputs (for testing/debugging)
+        wb_write_enable : out STD_LOGIC;
+        wb_write_reg : out STD_LOGIC_VECTOR(2 downto 0);
+        wb_write_data : out STD_LOGIC_VECTOR(31 downto 0);
         
         -- Outputs from Execute Stage to EX/MEM
         ex_mem_rti_phase : out STD_LOGIC;
@@ -278,6 +270,184 @@ architecture Structural of Processor_Top is
         );
     end component;
     
+    component Forwarding_Unit is
+        Port (
+            ID_EX_RegRs     : in  STD_LOGIC_VECTOR(2 downto 0);
+            ID_EX_RegRt     : in  STD_LOGIC_VECTOR(2 downto 0);
+            EX_MEM_RegWrite : in  STD_LOGIC;
+            EX_MEM_DestReg  : in  STD_LOGIC_VECTOR(2 downto 0);
+            EX_MEM_Rsrc1    : in  STD_LOGIC_VECTOR(2 downto 0);
+            EX_MEM_is_swap  : in  STD_LOGIC;
+            EX_MEM_is_in    : in  STD_LOGIC;
+            MEM_WB_RegWrite : in  STD_LOGIC;
+            MEM_WB_DestReg  : in  STD_LOGIC_VECTOR(2 downto 0);
+            MEM_WB_Rsrc1    : in  STD_LOGIC_VECTOR(2 downto 0);
+            MEM_WB_is_swap  : in  STD_LOGIC;
+            MEM_WB_is_in    : in  STD_LOGIC;
+            MEM_WB_mem_to_reg: in STD_LOGIC;
+            ForwardA        : out STD_LOGIC_VECTOR(3 downto 0);
+            ForwardB        : out STD_LOGIC_VECTOR(3 downto 0)
+        );
+    end component;
+    
+    component EX_MEM_Register is
+        Port (
+            clk : in STD_LOGIC;
+            rst : in STD_LOGIC;
+            ex_rti_phase : in STD_LOGIC;
+            ex_int_phase : in STD_LOGIC;
+            ex_mem_write : in STD_LOGIC;
+            ex_mem_read : in STD_LOGIC;
+            ex_mem_to_reg : in STD_LOGIC;
+            ex_alu_op : in STD_LOGIC_VECTOR(3 downto 0);
+            ex_out_enable : in STD_LOGIC;
+            ex_is_swap : in STD_LOGIC;
+            ex_swap_phase : in STD_LOGIC;
+            ex_reg_write : in STD_LOGIC;
+            ex_is_call : in STD_LOGIC;
+            ex_is_ret : in STD_LOGIC;
+            ex_is_push : in STD_LOGIC;
+            ex_is_pop : in STD_LOGIC;
+            ex_hlt : in STD_LOGIC;
+            ex_is_in : in STD_LOGIC;
+            ex_is_int : in STD_LOGIC;
+            ex_is_rti : in STD_LOGIC;
+            ex_read_reg1 : in STD_LOGIC_VECTOR(2 downto 0);
+            ex_write_reg : in STD_LOGIC_VECTOR(2 downto 0);
+            ex_read_data2 : in STD_LOGIC_VECTOR(31 downto 0);
+            ex_alu_result : in STD_LOGIC_VECTOR(31 downto 0);
+            ex_pc_plus_1 : in STD_LOGIC_VECTOR(31 downto 0);
+            mem_rti_phase : out STD_LOGIC;
+            mem_int_phase : out STD_LOGIC;
+            mem_mem_write : out STD_LOGIC;
+            mem_mem_read : out STD_LOGIC;
+            mem_mem_to_reg : out STD_LOGIC;
+            mem_alu_op : out STD_LOGIC_VECTOR(3 downto 0);
+            mem_out_enable : out STD_LOGIC;
+            mem_is_swap : out STD_LOGIC;
+            mem_swap_phase : out STD_LOGIC;
+            mem_reg_write : out STD_LOGIC;
+            mem_is_call : out STD_LOGIC;
+            mem_is_ret : out STD_LOGIC;
+            mem_is_push : out STD_LOGIC;
+            mem_is_pop : out STD_LOGIC;
+            mem_hlt : out STD_LOGIC;
+            mem_is_in : out STD_LOGIC;
+            mem_is_int : out STD_LOGIC;
+            mem_is_rti : out STD_LOGIC;
+            mem_read_reg1 : out STD_LOGIC_VECTOR(2 downto 0);
+            mem_write_reg : out STD_LOGIC_VECTOR(2 downto 0);
+            mem_read_data2 : out STD_LOGIC_VECTOR(31 downto 0);
+            mem_alu_result : out STD_LOGIC_VECTOR(31 downto 0);
+            mem_pc_plus_1 : out STD_LOGIC_VECTOR(31 downto 0)
+        );
+    end component;
+    
+    component Memory_Stage is
+        Port (
+            clk : in STD_LOGIC;
+            rst : in STD_LOGIC;
+            hlt : in STD_LOGIC;
+            is_ret : in STD_LOGIC;
+            is_rti : in STD_LOGIC;
+            is_int : in STD_LOGIC;
+            mem_read : in STD_LOGIC;
+            mem_write : in STD_LOGIC;
+            is_push : in STD_LOGIC;
+            alu_address_enable : in STD_LOGIC;
+            mem_to_reg : in STD_LOGIC;
+            is_pop : in STD_LOGIC;
+            out_enable : in STD_LOGIC;
+            is_swap : in STD_LOGIC;
+            swap_phase_previous : in STD_LOGIC;
+            swap_phase_next : in STD_LOGIC;
+            reg_write : in STD_LOGIC;
+            is_call : in STD_LOGIC;
+            is_input : in STD_LOGIC;
+            rdst : in STD_LOGIC_VECTOR(2 downto 0);
+            rsrc1 : in STD_LOGIC_VECTOR(2 downto 0);
+            rsrc2_data : in STD_LOGIC_VECTOR(31 downto 0);
+            alu_result : in STD_LOGIC_VECTOR(31 downto 0);
+            pc_data : in STD_LOGIC_VECTOR(31 downto 0);
+            ccr_data : in STD_LOGIC_VECTOR(31 downto 0);
+            input_port_data : in STD_LOGIC_VECTOR(31 downto 0);
+            int_load_pc_out : out STD_LOGIC;
+            rti_load_pc_out : out STD_LOGIC;
+            is_ret_out : out STD_LOGIC;
+            is_rti_out : out STD_LOGIC;
+            is_int_out : out STD_LOGIC;
+            mem_read_out : out STD_LOGIC;
+            mem_write_out : out STD_LOGIC;
+            is_push_out : out STD_LOGIC;
+            alu_address_out : out STD_LOGIC;
+            mem_to_reg_out : out STD_LOGIC;
+            is_pop_out : out STD_LOGIC;
+            out_enable_out : out STD_LOGIC;
+            is_swap_out : out STD_LOGIC;
+            swap_phase_out : out STD_LOGIC;
+            reg_write_out : out STD_LOGIC;
+            is_call_out : out STD_LOGIC;
+            is_input_out : out STD_LOGIC;
+            rdst_out : out STD_LOGIC_VECTOR(2 downto 0);
+            rsrc1_out : out STD_LOGIC_VECTOR(2 downto 0);
+            rsrc2_data_out : out STD_LOGIC_VECTOR(31 downto 0);
+            alu_result_out : out STD_LOGIC_VECTOR(31 downto 0);
+            mem_data_out : out STD_LOGIC_VECTOR(31 downto 0);
+            input_port_data_out : out STD_LOGIC_VECTOR(31 downto 0)
+        );
+    end component;
+    
+    component Mem_Wb_Register is
+        Port (
+            rst : in STD_LOGIC;
+            clk : in STD_LOGIC;
+            mem_to_reg : in STD_LOGIC;
+            out_enable : in STD_LOGIC;
+            is_swap : in STD_LOGIC;
+            swap_phase : in STD_LOGIC;
+            reg_write : in STD_LOGIC;
+            is_input : in STD_LOGIC;
+            rdst : in STD_LOGIC_VECTOR(2 downto 0);
+            rsrc1 : in STD_LOGIC_VECTOR(2 downto 0);
+            r_data2 : in STD_LOGIC_VECTOR(31 downto 0);
+            alu_result : in STD_LOGIC_VECTOR(31 downto 0);
+            mem_data : in STD_LOGIC_VECTOR(31 downto 0);
+            input_port_data : in STD_LOGIC_VECTOR(31 downto 0);
+            mem_to_reg_out : out STD_LOGIC;
+            out_enable_out : out STD_LOGIC;
+            is_swap_out : out STD_LOGIC;
+            swap_phase_out : out STD_LOGIC;
+            reg_write_out : out STD_LOGIC;
+            is_input_out : out STD_LOGIC;
+            rdst_out : out STD_LOGIC_VECTOR(2 downto 0);
+            rsrc1_out : out STD_LOGIC_VECTOR(2 downto 0);
+            r_data2_out : out STD_LOGIC_VECTOR(31 downto 0);
+            alu_result_out : out STD_LOGIC_VECTOR(31 downto 0);
+            mem_data_out : out STD_LOGIC_VECTOR(31 downto 0);
+            input_port_data_out : out STD_LOGIC_VECTOR(31 downto 0)
+        );
+    end component;
+    
+    component Write_Back is
+        Port (
+            MemToReg : in STD_LOGIC;
+            Is_Input : in STD_LOGIC;
+            Is_Output : in STD_LOGIC;
+            Is_Swap : in STD_LOGIC;
+            Swap_Phase : in STD_LOGIC;
+            Rdst : in STD_LOGIC_VECTOR(2 downto 0);
+            Rsrc1 : in STD_LOGIC_VECTOR(2 downto 0);
+            R_data2 : in STD_LOGIC_VECTOR(31 downto 0);
+            ALU_Result : in STD_LOGIC_VECTOR(31 downto 0);
+            Mem_Result : in STD_LOGIC_VECTOR(31 downto 0);
+            Input_Port_Data : in STD_LOGIC_VECTOR(31 downto 0);
+            Output_Port_Data : out STD_LOGIC_VECTOR(31 downto 0);
+            Write_Back_Data : out STD_LOGIC_VECTOR(31 downto 0);
+            Write_Back_Register : out STD_LOGIC_VECTOR(2 downto 0);
+            Swap_Phase_Next : out STD_LOGIC
+        );
+    end component;
+    
     -- Signals between Fetch and IF/ID
     signal instruction_fetch_signal : STD_LOGIC_VECTOR(31 downto 0);
     signal pc_plus_1_fetch_signal : STD_LOGIC_VECTOR(31 downto 0);
@@ -347,7 +517,123 @@ architecture Structural of Processor_Top is
     signal idex_branchC : STD_LOGIC;
     signal idex_branchN : STD_LOGIC;
     
+    -- Signals from EX/MEM to Memory Stage
+    signal exmem_rti_phase : STD_LOGIC;
+    signal exmem_int_phase : STD_LOGIC;
+    signal exmem_mem_write : STD_LOGIC;
+    signal exmem_mem_read : STD_LOGIC;
+    signal exmem_mem_to_reg : STD_LOGIC;
+    signal exmem_alu_op : STD_LOGIC_VECTOR(3 downto 0);
+    signal exmem_out_enable : STD_LOGIC;
+    signal exmem_is_swap : STD_LOGIC;
+    signal exmem_swap_phase : STD_LOGIC;
+    signal exmem_reg_write : STD_LOGIC;
+    signal exmem_is_call : STD_LOGIC;
+    signal exmem_is_ret : STD_LOGIC;
+    signal exmem_is_push : STD_LOGIC;
+    signal exmem_is_pop : STD_LOGIC;
+    signal exmem_hlt : STD_LOGIC;
+    signal exmem_is_in : STD_LOGIC;
+    signal exmem_is_int : STD_LOGIC;
+    signal exmem_is_rti : STD_LOGIC;
+    signal exmem_read_reg1 : STD_LOGIC_VECTOR(2 downto 0);
+    signal exmem_write_reg : STD_LOGIC_VECTOR(2 downto 0);
+    signal exmem_read_data2 : STD_LOGIC_VECTOR(31 downto 0);
+    signal exmem_alu_result : STD_LOGIC_VECTOR(31 downto 0);
+    signal exmem_pc_plus_1 : STD_LOGIC_VECTOR(31 downto 0);
+    
+    -- Signals from Memory Stage to MEM/WB
+    signal mem_is_ret : STD_LOGIC;
+    signal mem_is_rti : STD_LOGIC;
+    signal mem_is_int : STD_LOGIC;
+    signal mem_mem_read : STD_LOGIC;
+    signal mem_mem_write : STD_LOGIC;
+    signal mem_is_push : STD_LOGIC;
+    signal mem_alu_address : STD_LOGIC;
+    signal mem_mem_to_reg : STD_LOGIC;
+    signal mem_is_pop : STD_LOGIC;
+    signal mem_out_enable : STD_LOGIC;
+    signal mem_is_swap : STD_LOGIC;
+    signal mem_swap_phase : STD_LOGIC;
+    signal mem_reg_write : STD_LOGIC;
+    signal mem_is_call : STD_LOGIC;
+    signal mem_is_input : STD_LOGIC;
+    signal mem_rdst : STD_LOGIC_VECTOR(2 downto 0);
+    signal mem_rsrc1 : STD_LOGIC_VECTOR(2 downto 0);
+    signal mem_rsrc2_data : STD_LOGIC_VECTOR(31 downto 0);
+    signal mem_alu_result : STD_LOGIC_VECTOR(31 downto 0);
+    signal mem_data : STD_LOGIC_VECTOR(31 downto 0);
+    signal mem_input_port_data : STD_LOGIC_VECTOR(31 downto 0);
+    
+    -- Signals from MEM/WB to Writeback Stage
+    signal memwb_mem_to_reg : STD_LOGIC;
+    signal memwb_out_enable : STD_LOGIC;
+    signal memwb_is_swap : STD_LOGIC;
+    signal memwb_swap_phase : STD_LOGIC;
+    signal memwb_reg_write : STD_LOGIC;
+    signal memwb_is_input : STD_LOGIC;
+    signal memwb_rdst : STD_LOGIC_VECTOR(2 downto 0);
+    signal memwb_rsrc1 : STD_LOGIC_VECTOR(2 downto 0);
+    signal memwb_r_data2 : STD_LOGIC_VECTOR(31 downto 0);
+    signal memwb_alu_result : STD_LOGIC_VECTOR(31 downto 0);
+    signal memwb_mem_data : STD_LOGIC_VECTOR(31 downto 0);
+    signal memwb_input_port_data : STD_LOGIC_VECTOR(31 downto 0);
+    
+    -- Signals from Writeback Stage
+    signal wb_output_port_data : STD_LOGIC_VECTOR(31 downto 0);
+    signal wb_write_back_data : STD_LOGIC_VECTOR(31 downto 0);
+    signal wb_write_back_register : STD_LOGIC_VECTOR(2 downto 0);
+    signal wb_swap_phase_next : STD_LOGIC;
+    
+    -- Additional signals needed
+    signal ccr_register : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');  -- CCR register placeholder
+    signal int_load_pc_internal : STD_LOGIC;
+    signal rti_load_pc_internal : STD_LOGIC;
+    
+    -- Forwarding Unit signals
+    signal forward_a : STD_LOGIC_VECTOR(3 downto 0);
+    signal forward_b : STD_LOGIC_VECTOR(3 downto 0);
+    signal forward_ex_mem_data : STD_LOGIC_VECTOR(31 downto 0);
+    signal forward_mem_wb_data : STD_LOGIC_VECTOR(31 downto 0);
+    
 begin
+    
+    -- Connect writeback outputs
+    wb_write_enable <= memwb_reg_write;
+    wb_write_reg <= wb_write_back_register;
+    wb_write_data <= wb_write_back_data;
+    output_port <= wb_output_port_data;
+    
+    -- Forwarding data selection (simplified for now - uses lower 2 bits)
+    -- Forward data from EX/MEM stage
+    forward_ex_mem_data <= exmem_alu_result when forward_a(1 downto 0) = "01" or forward_b(1 downto 0) = "01" else
+                          exmem_read_data2 when forward_a(1 downto 0) = "10" or forward_b(1 downto 0) = "10" else
+                          (others => '0');
+    
+    -- Forward data from MEM/WB stage
+    forward_mem_wb_data <= wb_write_back_data when forward_a(1 downto 0) = "01" or forward_b(1 downto 0) = "01" else
+                          memwb_r_data2 when forward_a(1 downto 0) = "10" or forward_b(1 downto 0) = "10" else
+                          (others => '0');
+    
+    -- ==================== Forwarding Unit ====================
+    Forward_Unit: Forwarding_Unit
+        port map (
+            ID_EX_RegRs     => idex_read_reg1,
+            ID_EX_RegRt     => idex_write_reg,
+            EX_MEM_RegWrite => exmem_reg_write,
+            EX_MEM_DestReg  => exmem_write_reg,
+            EX_MEM_Rsrc1    => exmem_read_reg1,
+            EX_MEM_is_swap  => exmem_is_swap,
+            EX_MEM_is_in    => exmem_is_in,
+            MEM_WB_RegWrite => memwb_reg_write,
+            MEM_WB_DestReg  => memwb_rdst,
+            MEM_WB_Rsrc1    => memwb_rsrc1,
+            MEM_WB_is_swap  => memwb_is_swap,
+            MEM_WB_is_in    => memwb_is_input,
+            MEM_WB_mem_to_reg => memwb_mem_to_reg,
+            ForwardA        => forward_a,
+            ForwardB        => forward_b
+        );
     
     Fetch: Fetch_Stage
         port map (
@@ -356,10 +642,10 @@ begin
             pc_enable => pc_enable,
             ifid_enable => ifid_enable,
             ifid_flush => ifid_flush,
-            int_load_pc => int_load_pc,
-            is_ret => is_ret,
-            rti_load_pc => rti_load_pc,
-            is_call => is_call,
+            int_load_pc => int_load_pc_internal,
+            is_ret => exmem_is_ret,
+            rti_load_pc => rti_load_pc_internal,
+            is_call => exmem_is_call,
             is_conditional_jump => is_conditional_jump,
             is_unconditional_jump => is_unconditional_jump,
             immediate_decode => immediate_decode,
@@ -388,9 +674,9 @@ begin
             rst => rst,
             instruction => instruction_decode_signal,
             pc_in_plus_1 => pc_plus_1_decode_signal,
-            wb_write_enable => wb_write_enable,
-            wb_write_reg => wb_write_reg,
-            wb_write_data => wb_write_data,
+            wb_write_enable => memwb_reg_write,
+            wb_write_reg => wb_write_back_register,
+            wb_write_data => wb_write_back_data,
             previous_is_immediate => idex_is_immediate,  -- Feedback from ID/EX register
             read_data1 => read_data1_decode,
             read_data2 => read_data2_decode,
@@ -521,10 +807,10 @@ begin
             id_ex_branchC => idex_branchC,
             id_ex_branchN => idex_branchN,
             if_id_immediate => instruction_decode_signal,
-            forward_ex_mem => forward_ex_mem,
-            forward_mem_wb => forward_mem_wb,
-            forward_mux_a_sel => forward_mux_a_sel,
-            forward_mux_b_sel => forward_mux_b_sel,
+            forward_ex_mem => forward_ex_mem_data,
+            forward_mem_wb => forward_mem_wb_data,
+            forward_mux_a_sel => forward_a(1 downto 0),
+            forward_mux_b_sel => forward_b(1 downto 0),
             ex_mem_rti_phase => ex_mem_rti_phase,
             ex_mem_int_phase => ex_mem_int_phase,
             ex_mem_mem_write => ex_mem_mem_write,
@@ -548,6 +834,164 @@ begin
             ex_mem_alu_result => ex_mem_alu_result,
             conditional_jump => conditional_jump,
             pc_plus_2 => pc_plus_2
+        );
+    
+    -- ==================== EX/MEM Pipeline Register ====================
+    EXMEM_Reg: EX_MEM_Register
+        port map (
+            clk => clk,
+            rst => rst,
+            ex_rti_phase => ex_mem_rti_phase,
+            ex_int_phase => ex_mem_int_phase,
+            ex_mem_write => ex_mem_mem_write,
+            ex_mem_read => ex_mem_mem_read,
+            ex_mem_to_reg => ex_mem_mem_to_reg,
+            ex_alu_op => (others => '0'),  -- Not used in attached files, set to 0
+            ex_out_enable => ex_mem_out_enable,
+            ex_is_swap => ex_mem_is_swap,
+            ex_swap_phase => ex_mem_swap_phase,
+            ex_reg_write => ex_mem_reg_write,
+            ex_is_call => ex_mem_is_call,
+            ex_is_ret => ex_mem_is_ret,
+            ex_is_push => ex_mem_is_push,
+            ex_is_pop => ex_mem_is_pop,
+            ex_hlt => ex_mem_hlt,
+            ex_is_in => ex_mem_is_in,
+            ex_is_int => ex_mem_is_int,
+            ex_is_rti => ex_mem_is_rti,
+            ex_read_reg1 => ex_mem_read_reg1,
+            ex_write_reg => ex_mem_write_reg,
+            ex_read_data2 => ex_mem_read_data2,
+            ex_alu_result => ex_mem_alu_result,
+            ex_pc_plus_1 => idex_pc_plus_1,  -- Pass through PC+1
+            mem_rti_phase => exmem_rti_phase,
+            mem_int_phase => exmem_int_phase,
+            mem_mem_write => exmem_mem_write,
+            mem_mem_read => exmem_mem_read,
+            mem_mem_to_reg => exmem_mem_to_reg,
+            mem_alu_op => exmem_alu_op,
+            mem_out_enable => exmem_out_enable,
+            mem_is_swap => exmem_is_swap,
+            mem_swap_phase => exmem_swap_phase,
+            mem_reg_write => exmem_reg_write,
+            mem_is_call => exmem_is_call,
+            mem_is_ret => exmem_is_ret,
+            mem_is_push => exmem_is_push,
+            mem_is_pop => exmem_is_pop,
+            mem_hlt => exmem_hlt,
+            mem_is_in => exmem_is_in,
+            mem_is_int => exmem_is_int,
+            mem_is_rti => exmem_is_rti,
+            mem_read_reg1 => exmem_read_reg1,
+            mem_write_reg => exmem_write_reg,
+            mem_read_data2 => exmem_read_data2,
+            mem_alu_result => exmem_alu_result,
+            mem_pc_plus_1 => exmem_pc_plus_1
+        );
+    
+    -- ==================== Memory Stage ====================
+    Memory: Memory_Stage
+        port map (
+            clk => clk,
+            rst => rst,
+            hlt => exmem_hlt,
+            is_ret => exmem_is_ret,
+            is_rti => exmem_is_rti,
+            is_int => exmem_is_int,
+            mem_read => exmem_mem_read,
+            mem_write => exmem_mem_write,
+            is_push => exmem_is_push,
+            alu_address_enable => '1',  -- Assuming ALU result is always used for address when needed
+            mem_to_reg => exmem_mem_to_reg,
+            is_pop => exmem_is_pop,
+            out_enable => exmem_out_enable,
+            is_swap => exmem_is_swap,
+            swap_phase_previous => exmem_swap_phase,
+            swap_phase_next => wb_swap_phase_next,  -- Feedback from WB stage
+            reg_write => exmem_reg_write,
+            is_call => exmem_is_call,
+            is_input => exmem_is_in,
+            rdst => exmem_write_reg,
+            rsrc1 => exmem_read_reg1,
+            rsrc2_data => exmem_read_data2,
+            alu_result => exmem_alu_result,
+            pc_data => exmem_pc_plus_1,
+            ccr_data => ccr_register,
+            input_port_data => input_port,  -- Connected to entity input port
+            int_load_pc_out => int_load_pc_internal,
+            rti_load_pc_out => rti_load_pc_internal,
+            is_ret_out => mem_is_ret,
+            is_rti_out => mem_is_rti,
+            is_int_out => mem_is_int,
+            mem_read_out => mem_mem_read,
+            mem_write_out => mem_mem_write,
+            is_push_out => mem_is_push,
+            alu_address_out => mem_alu_address,
+            mem_to_reg_out => mem_mem_to_reg,
+            is_pop_out => mem_is_pop,
+            out_enable_out => mem_out_enable,
+            is_swap_out => mem_is_swap,
+            swap_phase_out => mem_swap_phase,
+            reg_write_out => mem_reg_write,
+            is_call_out => mem_is_call,
+            is_input_out => mem_is_input,
+            rdst_out => mem_rdst,
+            rsrc1_out => mem_rsrc1,
+            rsrc2_data_out => mem_rsrc2_data,
+            alu_result_out => mem_alu_result,
+            mem_data_out => mem_data,
+            input_port_data_out => mem_input_port_data
+        );
+    
+    -- ==================== MEM/WB Pipeline Register ====================
+    MEMWB_Reg: Mem_Wb_Register
+        port map (
+            rst => rst,
+            clk => clk,
+            mem_to_reg => mem_mem_to_reg,
+            out_enable => mem_out_enable,
+            is_swap => mem_is_swap,
+            swap_phase => mem_swap_phase,
+            reg_write => mem_reg_write,
+            is_input => mem_is_input,
+            rdst => mem_rdst,
+            rsrc1 => mem_rsrc1,
+            r_data2 => mem_rsrc2_data,
+            alu_result => mem_alu_result,
+            mem_data => mem_data,
+            input_port_data => mem_input_port_data,
+            mem_to_reg_out => memwb_mem_to_reg,
+            out_enable_out => memwb_out_enable,
+            is_swap_out => memwb_is_swap,
+            swap_phase_out => memwb_swap_phase,
+            reg_write_out => memwb_reg_write,
+            is_input_out => memwb_is_input,
+            rdst_out => memwb_rdst,
+            rsrc1_out => memwb_rsrc1,
+            r_data2_out => memwb_r_data2,
+            alu_result_out => memwb_alu_result,
+            mem_data_out => memwb_mem_data,
+            input_port_data_out => memwb_input_port_data
+        );
+    
+    -- ==================== Writeback Stage ====================
+    Writeback: Write_Back
+        port map (
+            MemToReg => memwb_mem_to_reg,
+            Is_Input => memwb_is_input,
+            Is_Output => memwb_out_enable,
+            Is_Swap => memwb_is_swap,
+            Swap_Phase => memwb_swap_phase,
+            Rdst => memwb_rdst,
+            Rsrc1 => memwb_rsrc1,
+            R_data2 => memwb_r_data2,
+            ALU_Result => memwb_alu_result,
+            Mem_Result => memwb_mem_data,
+            Input_Port_Data => memwb_input_port_data,
+            Output_Port_Data => wb_output_port_data,
+            Write_Back_Data => wb_write_back_data,
+            Write_Back_Register => wb_write_back_register,
+            Swap_Phase_Next => wb_swap_phase_next
         );
     
 end Structural;
