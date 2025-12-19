@@ -109,8 +109,18 @@ add wave -label "Reset" -color Red /Processor_Top_TB/rst
 # ========================================
 add wave -divider -height 25 "========== FETCH STAGE =========="
 puts "Adding Fetch signals..."
-if {[catch {add wave -label "PC" -radix unsigned /Processor_Top_TB/UUT/Fetch/pc_out}]} {puts "  Warning: PC signal not found"}
-if {[catch {add wave -label "Instruction" -radix hex /Processor_Top_TB/UUT/Fetch/instruction_fetch}]} {puts "  Warning: Instruction signal not found"}
+if {[catch {add wave -label "PC" -radix hex /Processor_Top_TB/UUT/Fetch/pc_current}]} {puts "  Warning: PC not found"}
+if {[catch {add wave -label "PC Next" -radix hex /Processor_Top_TB/UUT/Fetch/pc_next}]} {puts "  Warning: PC Next not found"}
+
+# PC Mux Control and Inputs
+add wave -divider -height 20 "--- PC Mux Control ---"
+if {[catch {add wave -label ">>> PC Mux Selector <<<" -radix binary /Processor_Top_TB/UUT/Fetch/pc_mux_sel_signal}]} {puts "  Warning: PC Mux Selector not found"}
+if {[catch {add wave -label "PC+1" -radix hex /Processor_Top_TB/UUT/Fetch/pc_incremented}]} {puts "  Warning: PC+1 not found"}
+
+# Jump Control Signals
+add wave -divider -height 20 "--- Jump Control ---"
+if {[catch {add wave -label ">>> Conditional Jump (from Execute) <<<" /Processor_Top_TB/UUT/conditional_jump_from_execute}]} {puts "  Warning: Conditional Jump not found"}
+if {[catch {add wave -label ">>> Unconditional Branch (from Decode) <<<" /Processor_Top_TB/UUT/unconditional_branch_from_decode}]} {puts "  Warning: Unconditional Branch not found"}
 
 # ========================================
 # IF/ID REGISTER

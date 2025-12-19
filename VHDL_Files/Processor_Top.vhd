@@ -21,8 +21,6 @@ entity Processor_Top is
         mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);
         
         -- External control signals (for testing/control)
-        is_conditional_jump : in STD_LOGIC;
-        is_unconditional_jump : in STD_LOGIC;
         immediate_decode : in STD_LOGIC_VECTOR(31 downto 0);
         alu_immediate : in STD_LOGIC_VECTOR(31 downto 0);
         
@@ -507,7 +505,6 @@ architecture Structural of Processor_Top is
     signal branchZ_decode : STD_LOGIC;
     signal branchC_decode : STD_LOGIC;
     signal branchN_decode : STD_LOGIC;
-    signal unconditional_branch_decode : STD_LOGIC;
     signal pc_plus_1_from_decode : STD_LOGIC_VECTOR(31 downto 0);
     
     -- Signals from ID/EX to Execute Stage
@@ -539,6 +536,10 @@ architecture Structural of Processor_Top is
     signal idex_branchZ : STD_LOGIC;
     signal idex_branchC : STD_LOGIC;
     signal idex_branchN : STD_LOGIC;
+    
+    -- Jump control signals (direct connections, not pipelined)
+    signal unconditional_branch_from_decode : STD_LOGIC;
+    signal conditional_jump_from_execute : STD_LOGIC;
     
     -- Signals from EX/MEM to Memory Stage
     signal exmem_rti_phase : STD_LOGIC;
@@ -726,8 +727,8 @@ begin
             is_ret => exmem_is_ret,
             rti_load_pc => rti_load_pc_internal,
             is_call => exmem_is_call,
-            is_conditional_jump => is_conditional_jump,
-            is_unconditional_jump => is_unconditional_jump,
+            is_conditional_jump => conditional_jump_from_execute,
+            is_unconditional_jump => unconditional_branch_from_decode,
             immediate_decode => immediate_decode,
             alu_immediate => alu_immediate,
             pc_out => mem_address,
@@ -785,7 +786,7 @@ begin
             branchZ => branchZ_decode,
             branchC => branchC_decode,
             branchN => branchN_decode,
-            unconditional_branch => unconditional_branch_decode,
+            unconditional_branch => unconditional_branch_from_decode,
             pc_out_plus_1 => pc_plus_1_from_decode
         );
     
@@ -914,7 +915,7 @@ begin
             ex_mem_read_data2 => ex_mem_read_data2,
             ex_mem_alu_result => ex_mem_alu_result,
             ex_mem_input_port_data => execute_input_port_data,
-            conditional_jump => conditional_jump,
+            conditional_jump => conditional_jump_from_execute,
             pc_plus_2 => pc_plus_2
         );
     
@@ -1098,5 +1099,8 @@ begin
             data_in => wb_output_port_data,
             data_out => output_port_registered
         );
+    
+    -- Connect internal jump signals to top-level outputs (for debugging)
+    conditional_jump <= conditional_jump_from_execute;
     
 end Structural;

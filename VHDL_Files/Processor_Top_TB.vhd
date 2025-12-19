@@ -17,8 +17,6 @@ architecture Behavioral of Processor_Top_TB is
             ifid_flush : in STD_LOGIC;
             mem_address : out STD_LOGIC_VECTOR(31 downto 0);
             mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);
-            is_conditional_jump : in STD_LOGIC;
-            is_unconditional_jump : in STD_LOGIC;
             immediate_decode : in STD_LOGIC_VECTOR(31 downto 0);
             alu_immediate : in STD_LOGIC_VECTOR(31 downto 0);
             input_port : in STD_LOGIC_VECTOR(31 downto 0);
@@ -62,8 +60,6 @@ architecture Behavioral of Processor_Top_TB is
     signal mem_address : STD_LOGIC_VECTOR(31 downto 0);
     signal mem_read_data : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     
-    signal is_conditional_jump : STD_LOGIC := '0';
-    signal is_unconditional_jump : STD_LOGIC := '0';
     signal immediate_decode : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     signal alu_immediate : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     
@@ -101,52 +97,61 @@ architecture Behavioral of Processor_Top_TB is
     -- Clock period
     constant clk_period : time := 10 ns;
     
-    -- Instruction memory (IN/OUT test)
+    -- Instruction memory (JUMP test)
     type mem_array is array (0 to 31) of STD_LOGIC_VECTOR(31 downto 0);
     signal instruction_memory : mem_array := (
-        -- Address 0: Jump to program start location
-        0 => X"00000002",  -- Jump to address 2 (program start)
-        1 => X"00000000",  -- NOP (unused)
-        
-        -- Test PUSH and POP instructions
-        -- First, load some values into registers
-        2 => X"A4800000",  -- LDM R2, #0x1234 (opcode=0x52, rd=2)
-        3 => X"00001234",  -- immediate 0x1234
-        4 => X"00000000",  -- NOP
-        5 => X"00000000",  -- NOP
-        6 => X"00000000",  -- NOP
-        7 => X"00000000",  -- NOP
-        8 => X"00000000",  -- NOP
-        
-        9 => X"A4C00000",  -- LDM R3, #0x5678 (opcode=0x52, rd=3)
-        10 => X"00005678", -- immediate 0x5678
-        11 => X"00000000", -- NOP
-        12 => X"00000000", -- NOP
-        13 => X"00000000", -- NOP
-        14 => X"00000000", -- NOP
-        15 => X"00000000", -- NOP
-        
-        -- PUSH R2 onto stack
-        16 => X"62100000", -- PUSH R2 (opcode=0x31, rs1=2)
-        17 => X"00000000", -- NOP
-        18 => X"00000000", -- NOP
-        19 => X"00000000", -- NOP
-        20 => X"00000000", -- NOP
-        21 => X"00000000", -- NOP
-        
-        -- PUSH R3 onto stack
-        22 => X"62180000", -- PUSH R3 (opcode=0x31, rs1=3)
-        23 => X"00000000", -- NOP
-        24 => X"00000000", -- NOP
-        25 => X"00000000", -- NOP
-        26 => X"00000000", -- NOP
-        27 => X"00000000", -- NOP
-        
-        -- POP into R4 (should get R3's value: 0x5678)
-        28 => X"65000000", -- POP R4 (opcode=0x32, rd=4)
-        29 => X"00000000", -- NOP
-        30 => X"00000000", -- NOP
-        31 => X"00000000", -- NOP
+        -- Address 0: pointer to program start (address 2)
+        0 => X"00000002",
+        1 => X"00000000",
+
+        -- Program starts at address 2
+        -- LDM R1, #5
+        2 => X"A4400000",  -- LDM R1, #5
+        3 => X"00000005",
+        -- 5 NOPs
+        4 => X"00000000",
+        5 => X"00000000",
+        6 => X"00000000",
+        7 => X"00000000",
+        8 => X"00000000",
+
+        -- LDM R2, #5
+        9 => X"A4800000",  -- LDM R2, #5
+        10 => X"00000005",
+        -- 5 NOPs
+        11 => X"00000000",
+        12 => X"00000000",
+        13 => X"00000000",
+        14 => X"00000000",
+        15 => X"00000000",
+
+        -- SUB R3, R1, R2  (should produce zero)
+        16 => X"12CA0000",
+        -- 5 NOPs
+        17 => X"00000000",
+        18 => X"00000000",
+        19 => X"00000000",
+        20 => X"00000000",
+        21 => X"00000000",
+
+        -- Conditional jump: JZ to address 28 (if zero)
+        22 => X"C4000000",
+        23 => X"0000001C",
+
+        -- Unconditional jump: JMP to address 30
+        24 => X"C2000000",
+        25 => X"0000001E",
+
+        26 => X"00000000",
+        27 => X"00000000",
+
+        -- Target 28: LDM R4, #DEADBEEF  (taken by JZ)
+        28 => X"A5000000",
+        29 => X"DEADBEEF",
+
+        -- Target 30: LDM R5, #0xAA (taken by JMP)
+        30 => X"A5400000",
+        31 => X"000000AA",
         others => X"00000000"
     );
     
@@ -162,8 +167,6 @@ begin
             ifid_flush => ifid_flush,
             mem_address => mem_address,
             mem_read_data => mem_read_data,
-            is_conditional_jump => is_conditional_jump,
-            is_unconditional_jump => is_unconditional_jump,
             immediate_decode => immediate_decode,
             alu_immediate => alu_immediate,
             input_port => input_port,
@@ -218,8 +221,8 @@ begin
         -- Release reset
         rst <= '0';
         
-        -- Run for 50 cycles to see all PUSH/POP instructions complete
-        wait for clk_period * 50;
+    -- Run for 100 cycles to allow jump tests to complete
+    wait for clk_period * 100;
         
         -- Stop simulation
         wait;
