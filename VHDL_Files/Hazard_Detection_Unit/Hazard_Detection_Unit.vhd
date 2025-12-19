@@ -11,6 +11,7 @@ entity Hazard_Detection_Unit is
 	 ex_rsrc1 : in std_logic_vector(2 downto 0); --Pop load use
 	 ex_rsrc2 : in std_logic_vector(2 downto 0); --Pop load use
 	 ex_is_conditional : in std_logic; --Conditional jump 
+	 ex_has_one_operand : in std_logic; --Pop load use
 	 ex_has_two_operands : in std_logic; --Pop load use
 	 mem_is_int : in std_logic; --Interrupt
 	 mem_is_ret : in std_logic; --Return
@@ -31,7 +32,7 @@ end entity;
 architecture a_Hazard_Detection_Unit of Hazard_Detection_Unit is
 begin
   
-  process(mem_mem_read, mem_mem_write, mem_is_pop, mem_rdst, ex_rsrc1, ex_rsrc2, ex_is_conditional, ex_has_two_operands, mem_is_int, mem_is_ret, mem_is_rti, wb_is_swap, wb_swap_phase, mem_int_phase, mem_rti_phase)
+  process(mem_mem_read, mem_mem_write, mem_is_pop, mem_rdst, ex_rsrc1, ex_rsrc2, ex_is_conditional, ex_has_one_operand, ex_has_two_operands, mem_is_int, mem_is_ret, mem_is_rti, wb_is_swap, wb_swap_phase, mem_int_phase, mem_rti_phase)
   begin
     if((mem_mem_read = '1' or mem_mem_write = '1') or ex_is_conditional = '1' or mem_is_ret = '1' or (mem_is_rti = '1' and mem_rti_phase = '0') or (mem_is_int = '1' and mem_int_phase(1) = '0')) then
 	   if_flush <= '1';
@@ -45,7 +46,7 @@ begin
 	   id_flush <= '0';
 	 end if;
 	 
-	 if((wb_is_swap = '1' and wb_swap_phase = '1') or (((mem_rdst = ex_rsrc1) or ((mem_rdst = ex_rsrc2) and ex_has_two_operands = '1')) and mem_is_pop = '1')) then
+	 if((wb_is_swap = '1' and wb_swap_phase = '1') or ((((mem_rdst = ex_rsrc1) and (ex_has_one_operand = '1' or ex_has_two_operands = '1')) or ((mem_rdst = ex_rsrc2) and ex_has_two_operands = '1')) and mem_is_pop = '1')) then
 	   if_id_enable <= '0';
 		id_ex_enable <= '0';
 		ex_mem_enable <= '0';
@@ -55,7 +56,7 @@ begin
 		ex_mem_enable <= '1';
 	 end if;
 	 
-	 if((mem_mem_read = '1' or mem_mem_write = '1') or (((mem_rdst = ex_rsrc1) or ((mem_rdst = ex_rsrc2) and ex_has_two_operands = '1')) and mem_is_pop = '1') or (wb_is_swap = '1' and wb_swap_phase = '1')) then
+	 if((mem_mem_read = '1' or mem_mem_write = '1') or ((((mem_rdst = ex_rsrc1) and (ex_has_one_operand = '1' or ex_has_two_operands = '1')) or ((mem_rdst = ex_rsrc2) and ex_has_two_operands = '1')) and mem_is_pop = '1') or (wb_is_swap = '1' and wb_swap_phase = '1')) then
 	   pc_enable <= '0';
 	 else
 	   pc_enable <= '1';

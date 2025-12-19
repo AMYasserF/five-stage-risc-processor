@@ -15,7 +15,8 @@ architecture a_Hazard_Detection_Unit_tb of Hazard_Detection_Unit_tb is
 	 mem_rdst : in std_logic_vector(2 downto 0); --Pop load use
 	 ex_rsrc1 : in std_logic_vector(2 downto 0); --Pop load use
 	 ex_rsrc2 : in std_logic_vector(2 downto 0); --Pop load use
-	 ex_is_conditional : in std_logic; --Conditional jump 
+	 ex_is_conditional : in std_logic; --Conditional jump
+	 ex_has_one_operand : in std_logic; --Pop load use 
 	 ex_has_two_operands : in std_logic; --Pop load use
 	 mem_is_int : in std_logic; --Interrupt
 	 mem_is_ret : in std_logic; --Return
@@ -39,7 +40,8 @@ architecture a_Hazard_Detection_Unit_tb of Hazard_Detection_Unit_tb is
 	 signal mem_rdst_t : std_logic_vector(2 downto 0) := "000";
 	 signal ex_rsrc1_t : std_logic_vector(2 downto 0) := "000"; 
 	 signal ex_rsrc2_t : std_logic_vector(2 downto 0) := "000"; 
-	 signal ex_is_conditional_t : std_logic := '0';  
+	 signal ex_is_conditional_t : std_logic := '0';
+	 signal ex_has_one_operand_t : std_logic := '0';  
 	 signal ex_has_two_operands_t : std_logic := '0';
 	 signal mem_is_int_t : std_logic := '0'; 
 	 signal mem_is_ret_t : std_logic := '0'; 
@@ -64,6 +66,7 @@ begin
 	 ex_rsrc1_t,  
 	 ex_rsrc2_t,  
 	 ex_is_conditional_t, 
+	 ex_has_one_operand_t,
 	 ex_has_two_operands_t,
 	 mem_is_int_t,  
 	 mem_is_ret_t,  
@@ -90,6 +93,7 @@ begin
     ex_rsrc1_t <= "000";
     ex_rsrc2_t <= "000";
     ex_is_conditional_t <= '0';
+    ex_has_one_operand_t <= '0';
     ex_has_two_operands_t <= '0';
     mem_is_ret_t <= '0';
     mem_is_int_t <= '0';
@@ -111,10 +115,15 @@ begin
     ex_rsrc1_t <= "101";
     ex_rsrc2_t <= "011";
     ex_has_two_operands_t <= '1';
+    ex_has_one_operand_t <= '1';
     wait for 50 ns;
     mem_rdst_t <= "011";
     wait for 50 ns;
     ex_has_two_operands_t <= '0';
+    wait for 50 ns;
+    mem_rdst_t <= "000";
+    ex_rsrc1_t <= "000";
+    ex_has_one_operand_t <= '0';
     wait for 50 ns;
     
     --Testing conditional jump
