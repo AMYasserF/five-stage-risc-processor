@@ -17,8 +17,6 @@ architecture Behavioral of Processor_Top_TB is
             ifid_flush : in STD_LOGIC;
             mem_address : out STD_LOGIC_VECTOR(31 downto 0);
             mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);
-            immediate_decode : in STD_LOGIC_VECTOR(31 downto 0);
-            alu_immediate : in STD_LOGIC_VECTOR(31 downto 0);
             input_port : in STD_LOGIC_VECTOR(31 downto 0);
             output_port : out STD_LOGIC_VECTOR(31 downto 0);
             wb_write_enable : out STD_LOGIC;
@@ -59,9 +57,6 @@ architecture Behavioral of Processor_Top_TB is
     
     signal mem_address : STD_LOGIC_VECTOR(31 downto 0);
     signal mem_read_data : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
-    
-    signal immediate_decode : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
-    signal alu_immediate : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     
     signal input_port : STD_LOGIC_VECTOR(31 downto 0) := X"DEADBEEF";
     signal output_port : STD_LOGIC_VECTOR(31 downto 0);
@@ -139,11 +134,11 @@ architecture Behavioral of Processor_Top_TB is
         23 => X"0000001C",
 
         -- Unconditional jump: JMP to address 30
-        24 => X"C2000000",
-        25 => X"0000001E",
+        24 => X"00000000",
+        25 => X"00000000",
 
-        26 => X"00000000",
-        27 => X"00000000",
+        26 => X"00000006",
+        27 => X"00000006",
 
         -- Target 28: LDM R4, #DEADBEEF  (taken by JZ)
         28 => X"A5000000",
@@ -167,8 +162,6 @@ begin
             ifid_flush => ifid_flush,
             mem_address => mem_address,
             mem_read_data => mem_read_data,
-            immediate_decode => immediate_decode,
-            alu_immediate => alu_immediate,
             input_port => input_port,
             output_port => output_port,
             wb_write_enable => wb_write_enable,

@@ -20,10 +20,6 @@ entity Processor_Top is
         mem_address : out STD_LOGIC_VECTOR(31 downto 0);
         mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);
         
-        -- External control signals (for testing/control)
-        immediate_decode : in STD_LOGIC_VECTOR(31 downto 0);
-        alu_immediate : in STD_LOGIC_VECTOR(31 downto 0);
-        
         -- Input/Output Ports
         input_port : in STD_LOGIC_VECTOR(31 downto 0);
         output_port : out STD_LOGIC_VECTOR(31 downto 0);
@@ -657,8 +653,13 @@ architecture Structural of Processor_Top is
     signal output_port_registered : STD_LOGIC_VECTOR(31 downto 0); -- Registered output
     signal output_port_enable : STD_LOGIC; -- Enable for output register
     
+    -- Internal signals for HDU outputs (initialized to enable pipeline since HDU is not bound)
+    signal hdu_pc_enable : STD_LOGIC := '1';
+    signal hdu_ifid_enable : STD_LOGIC := '1';
+    signal hdu_ifid_flush : STD_LOGIC := '0';
+    
     signal unused : STD_LOGIC := '0';
-    signal unused_2bits : STD_LOGIC := "00";
+    signal unused_2bits : STD_LOGIC_VECTOR(1 downto 0) := "00";
     signal unused_3bits : STD_LOGIC_VECTOR(2 downto 0) := "000";
     
 begin
@@ -764,32 +765,32 @@ begin
 	        mem_is_rti => exmem_is_rti,
 	        wb_is_swap => memwb_is_swap,
 	        wb_swap_phase => memwb_swap_phase,
-	        mem_int_phase => unused_2bits
+	        mem_int_phase => unused_2bits,
 	        mem_rti_phase => exmem_rti_phase,
-	        if_flush => ifid_flush,
+	        if_flush => hdu_ifid_flush,
 	        id_flush => unused,
 	        ex_flush => unused,
-	        if_id_enable => ifid_enable,
+	        if_id_enable => hdu_ifid_enable,
 	        id_ex_enable => unused,
 	        ex_mem_enable => unused,
-	        pc_enable => pc_enable
+	        pc_enable => hdu_pc_enable
        );
     
     Fetch: Fetch_Stage
         port map (
             clk => clk,
             rst => rst,
-            pc_enable => pc_enable,
-            ifid_enable => ifid_enable,
-            ifid_flush => ifid_flush,
+            pc_enable => hdu_pc_enable,
+            ifid_enable => hdu_ifid_enable,
+            ifid_flush => hdu_ifid_flush,
             int_load_pc => int_load_pc_internal,
             is_ret => exmem_is_ret,
             rti_load_pc => rti_load_pc_internal,
             is_call => exmem_is_call,
             is_conditional_jump => conditional_jump_from_execute,
             is_unconditional_jump => unconditional_branch_from_decode,
-            immediate_decode => immediate_decode,
-            alu_immediate => alu_immediate,
+            immediate_decode => instruction_decode_signal,
+            alu_immediate => exmem_alu_result,
             pc_out => mem_address,
             mem_read_data => mem_read_data,
             instruction_fetch => instruction_fetch_signal,

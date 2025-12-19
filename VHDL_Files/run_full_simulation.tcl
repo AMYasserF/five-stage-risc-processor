@@ -109,26 +109,26 @@ add wave -label "Reset" -color Red /Processor_Top_TB/rst
 # ========================================
 add wave -divider -height 25 "========== FETCH STAGE =========="
 puts "Adding Fetch signals..."
-if {[catch {add wave -label "PC" -radix hex /Processor_Top_TB/UUT/Fetch/pc_current}]} {puts "  Warning: PC not found"}
-if {[catch {add wave -label "PC Next" -radix hex /Processor_Top_TB/UUT/Fetch/pc_next}]} {puts "  Warning: PC Next not found"}
+add wave -label "PC" -radix unsigned /Processor_Top_TB/UUT/Fetch/pc_current
+add wave -label "PC Next" -radix unsigned /Processor_Top_TB/UUT/Fetch/pc_next
+add wave -label "PC+1" -radix unsigned /Processor_Top_TB/UUT/Fetch/pc_incremented
 
 # PC Mux Control and Inputs
-add wave -divider -height 20 "--- PC Mux Control ---"
-if {[catch {add wave -label ">>> PC Mux Selector <<<" -radix binary /Processor_Top_TB/UUT/Fetch/pc_mux_sel_signal}]} {puts "  Warning: PC Mux Selector not found"}
-if {[catch {add wave -label "PC+1" -radix hex /Processor_Top_TB/UUT/Fetch/pc_incremented}]} {puts "  Warning: PC+1 not found"}
+#add wave -divider -height 20 "--- PC Mux Control ---"
+add wave -label ">>> PC Mux Selector <<<" -radix binary /Processor_Top_TB/UUT/Fetch/pc_mux_sel_signal
 
 # Jump Control Signals
-add wave -divider -height 20 "--- Jump Control ---"
-if {[catch {add wave -label ">>> Conditional Jump (from Execute) <<<" /Processor_Top_TB/UUT/conditional_jump_from_execute}]} {puts "  Warning: Conditional Jump not found"}
-if {[catch {add wave -label ">>> Unconditional Branch (from Decode) <<<" /Processor_Top_TB/UUT/unconditional_branch_from_decode}]} {puts "  Warning: Unconditional Branch not found"}
+#add wave -divider -height 20 "--- Jump Control ---"
+add wave -label ">>> Conditional Jump (from Execute) <<<" /Processor_Top_TB/UUT/conditional_jump_from_execute
+add wave -label ">>> Unconditional Branch (from Decode) <<<" /Processor_Top_TB/UUT/unconditional_branch_from_decode
 
 # ========================================
 # IF/ID REGISTER
 # ========================================
-add wave -divider -height 25 "========== IF/ID REGISTER =========="
-puts "Adding IF/ID signals..."
-if {[catch {add wave -label "PC+1" -radix unsigned /Processor_Top_TB/UUT/pc_plus_1_decode_signal}]} {puts "  Warning: PC+1 signal not found"}
-if {[catch {add wave -label "Instruction" -radix hex /Processor_Top_TB/UUT/instruction_decode_signal}]} {puts "  Warning: Instruction signal not found"}
+#add wave -divider -height 25 "========== IF/ID REGISTER =========="
+#puts "Adding IF/ID signals..."
+#if {[catch {add wave -label "PC+1" -radix unsigned /Processor_Top_TB/UUT/#pc_plus_1_decode_signal}]} {puts "  Warning: PC+1 signal not found"}
+#if {[catch {add wave -label "Instruction" -radix hex /Processor_Top_TB/UUT/#instruction_decode_signal}]} {puts "  Warning: Instruction signal not found"}
 
 # ========================================
 # DECODE STAGE
