@@ -34,7 +34,7 @@ end register_file;
 architecture Behavioral of register_file is
     -- 8 x 32-bit registers (R0 to R7)
     type reg_array is array (0 to 7) of STD_LOGIC_VECTOR(31 downto 0);
-    signal registers : reg_array;
+    signal registers : reg_array := (others => (others => '0'));  -- Initialize all registers to zero
     
 begin
     -- Read process (asynchronous read)

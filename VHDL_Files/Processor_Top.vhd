@@ -604,16 +604,59 @@ begin
     wb_write_data <= wb_write_back_data;
     output_port <= wb_output_port_data;
     
-    -- Forwarding data selection (simplified for now - uses lower 2 bits)
-    -- Forward data from EX/MEM stage
-    forward_ex_mem_data <= exmem_alu_result when forward_a(1 downto 0) = "01" or forward_b(1 downto 0) = "01" else
-                          exmem_read_data2 when forward_a(1 downto 0) = "10" or forward_b(1 downto 0) = "10" else
-                          (others => '0');
+    -- Forwarding data selection for EX/MEM stage
+    -- Select appropriate data based on forwarding control signals
+    process(forward_a, forward_b, exmem_alu_result, exmem_read_data2, input_port)
+    begin
+        -- Default to ALU result for EX/MEM forwarding
+        forward_ex_mem_data <= exmem_alu_result;
+        
+        -- Check if any forwarding from EX/MEM is needed (codes 0001-0100)
+        if (forward_a = "0001" or forward_b = "0001") then
+            -- 0001: Forward EX/MEM ALU result
+            forward_ex_mem_data <= exmem_alu_result;
+        elsif (forward_a = "0010" or forward_b = "0010") then
+            -- 0010: Forward EX/MEM Rsrc2 (for SWAP)
+            forward_ex_mem_data <= exmem_read_data2;
+        elsif (forward_a = "0011" or forward_b = "0011") then
+            -- 0011: Forward EX/MEM ALU result (SWAP destination)
+            forward_ex_mem_data <= exmem_alu_result;
+        elsif (forward_a = "0100" or forward_b = "0100") then
+            -- 0100: Forward EX/MEM input port
+            forward_ex_mem_data <= input_port;
+        else
+            forward_ex_mem_data <= exmem_alu_result;
+        end if;
+    end process;
     
-    -- Forward data from MEM/WB stage
-    forward_mem_wb_data <= wb_write_back_data when forward_a(1 downto 0) = "01" or forward_b(1 downto 0) = "01" else
-                          memwb_r_data2 when forward_a(1 downto 0) = "10" or forward_b(1 downto 0) = "10" else
-                          (others => '0');
+    -- Forwarding data selection for MEM/WB stage
+    -- Select appropriate data based on forwarding control signals
+    process(forward_a, forward_b, memwb_mem_data, memwb_r_data2, 
+            memwb_alu_result, memwb_input_port_data, wb_write_back_data)
+    begin
+        -- Default to writeback data
+        forward_mem_wb_data <= wb_write_back_data;
+        
+        -- Check if any forwarding from MEM/WB is needed (codes 0101-1001)
+        if (forward_a = "0101" or forward_b = "0101") then
+            -- 0101: Forward MEM/WB memory data
+            forward_mem_wb_data <= memwb_mem_data;
+        elsif (forward_a = "0110" or forward_b = "0110") then
+            -- 0110: Forward MEM/WB Rsrc2 (for SWAP)
+            forward_mem_wb_data <= memwb_r_data2;
+        elsif (forward_a = "0111" or forward_b = "0111") then
+            -- 0111: Forward MEM/WB ALU result (SWAP destination)
+            forward_mem_wb_data <= memwb_alu_result;
+        elsif (forward_a = "1000" or forward_b = "1000") then
+            -- 1000: Forward MEM/WB input port
+            forward_mem_wb_data <= memwb_input_port_data;
+        elsif (forward_a = "1001" or forward_b = "1001") then
+            -- 1001: Forward MEM/WB ALU result
+            forward_mem_wb_data <= memwb_alu_result;
+        else
+            forward_mem_wb_data <= wb_write_back_data;
+        end if;
+    end process;
     
     -- ==================== Forwarding Unit ====================
     Forward_Unit: Forwarding_Unit

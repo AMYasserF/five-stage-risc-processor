@@ -112,8 +112,12 @@ architecture Behavioral of Processor_Top_TB is
         5 => X"00000005",  -- Immediate value: 5
         6 => X"A4D80000",  -- LDM R3, #3
         7 => X"00000003",  -- Immediate value: 3
-        8 => X"10530000",  -- ADD R1, R2, R3
+        8 => X"00000000",  -- NOP
         9 => X"00000000",  -- NOP
+        10 => X"00000000",  -- NOP
+        11 => X"00000000",  -- NOP
+        12 => X"10530000",  -- ADD R1, R2, R3
+        13 => X"00000000",  -- NOP
         others => X"00000000"
     );
     

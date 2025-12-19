@@ -84,27 +84,6 @@ end Execute_Stage;
 architecture Behavioral of Execute_Stage is
     
     -- Component Declarations
-    component ALU_OperandA_Mux is
-        Port (
-            read_data1      : in  STD_LOGIC_VECTOR(31 downto 0);
-            ex_mem_forward  : in  STD_LOGIC_VECTOR(31 downto 0);
-            mem_wb_forward  : in  STD_LOGIC_VECTOR(31 downto 0);
-            select_sig      : in  STD_LOGIC_VECTOR(1 downto 0);
-            operand_a       : out STD_LOGIC_VECTOR(31 downto 0)
-        );
-    end component;
-    
-    component ALU_OperandB_Mux is
-        Port (
-            read_data2      : in  STD_LOGIC_VECTOR(31 downto 0);
-            ex_mem_forward  : in  STD_LOGIC_VECTOR(31 downto 0);
-            mem_wb_forward  : in  STD_LOGIC_VECTOR(31 downto 0);
-            immediate       : in  STD_LOGIC_VECTOR(31 downto 0);
-            select_sig      : in  STD_LOGIC_VECTOR(1 downto 0);
-            operand_b       : out STD_LOGIC_VECTOR(31 downto 0)
-        );
-    end component;
-    
     component ALU is
         Port (
             A          : in  STD_LOGIC_VECTOR(31 downto 0);
@@ -178,33 +157,47 @@ architecture Behavioral of Execute_Stage is
     signal cond_branchC        : STD_LOGIC;
     signal cond_branchN        : STD_LOGIC;
     
-    signal mux_b_select        : STD_LOGIC_VECTOR(1 downto 0);
-    
 begin
     
-    -- Operand A Multiplexer (forwarding only)
-    mux_a: ALU_OperandA_Mux
-        port map (
-            read_data1     => id_ex_read_data1,
-            ex_mem_forward => forward_ex_mem,
-            mem_wb_forward => forward_mem_wb,
-            select_sig     => forward_mux_a_sel,
-            operand_a      => alu_operand_a
-        );
+    -- Operand A Selection Process (handles 2-bit forwarding from Processor_Top)
+    -- forward_mux_a_sel: 00 = ID/EX, 01 = EX/MEM, 10 = MEM/WB
+    process(id_ex_read_data1, forward_ex_mem, forward_mem_wb, forward_mux_a_sel)
+    begin
+        case forward_mux_a_sel is
+            when "00" =>
+                alu_operand_a <= id_ex_read_data1;  -- Normal path from ID/EX
+            when "01" =>
+                alu_operand_a <= forward_ex_mem;    -- Forward from EX/MEM
+            when "10" =>
+                alu_operand_a <= forward_mem_wb;    -- Forward from MEM/WB
+            when others =>
+                alu_operand_a <= id_ex_read_data1;  -- Default
+        end case;
+    end process;
     
-    -- Operand B Multiplexer (forwarding + immediate)
-    -- Select signal: MSB is is_immediate flag, LSB is from forwarding unit
-    mux_b_select <= id_ex_is_immediate & forward_mux_b_sel(0) when id_ex_is_immediate = '1' else forward_mux_b_sel;
-    
-    mux_b: ALU_OperandB_Mux
-        port map (
-            read_data2     => id_ex_read_data2,
-            ex_mem_forward => forward_ex_mem,
-            mem_wb_forward => forward_mem_wb,
-            immediate      => if_id_immediate,
-            select_sig     => mux_b_select,
-            operand_b      => alu_operand_b
-        );
+    -- Operand B Selection Process (handles forwarding + immediate)
+    -- Priority: Immediate value overrides forwarding
+    -- forward_mux_b_sel: 00 = ID/EX, 01 = EX/MEM, 10 = MEM/WB
+    process(id_ex_read_data2, forward_ex_mem, forward_mem_wb, 
+            if_id_immediate, id_ex_is_immediate, forward_mux_b_sel)
+    begin
+        if id_ex_is_immediate = '1' then
+            -- Immediate value has highest priority
+            alu_operand_b <= if_id_immediate;
+        else
+            -- Use forwarding logic
+            case forward_mux_b_sel is
+                when "00" =>
+                    alu_operand_b <= id_ex_read_data2;  -- Normal path from ID/EX
+                when "01" =>
+                    alu_operand_b <= forward_ex_mem;    -- Forward from EX/MEM
+                when "10" =>
+                    alu_operand_b <= forward_mem_wb;    -- Forward from MEM/WB
+                when others =>
+                    alu_operand_b <= id_ex_read_data2;  -- Default
+            end case;
+        end if;
+    end process;
     
     -- ALU
     alu_unit: ALU
