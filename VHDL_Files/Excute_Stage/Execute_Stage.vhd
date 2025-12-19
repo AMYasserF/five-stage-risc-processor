@@ -92,21 +92,28 @@ architecture Behavioral of Execute_Stage is
             Result     : out STD_LOGIC_VECTOR(31 downto 0);
             Zero_Flag  : out STD_LOGIC;
             Carry_Flag : out STD_LOGIC;
-            Neg_Flag   : out STD_LOGIC
+            Neg_Flag   : out STD_LOGIC;
+            CCR_Enable : out STD_LOGIC
         );
     end component;
     
     component CCR_Mux is
         Port (
-            selector            : in  STD_LOGIC_VECTOR(1 downto 0);
-            alu_Z               : in  STD_LOGIC;
-            alu_C               : in  STD_LOGIC;
-            alu_N               : in  STD_LOGIC;
-            stack_data_in       : in  STD_LOGIC_VECTOR(31 downto 0);
+            selector    : in  STD_LOGIC_VECTOR(1 downto 0);
+            ccr_alu     : in  STD_LOGIC_VECTOR(31 downto 0);
+            ccr_branch  : in  STD_LOGIC_VECTOR(31 downto 0);
+            ccr_stack   : in  STD_LOGIC_VECTOR(31 downto 0);
+            mux_out     : out STD_LOGIC_VECTOR(31 downto 0)
+        );
+    end component;
+    
+    component CCR_Branch_Unit is
+        Port (
+            current_ccr         : in  STD_LOGIC_VECTOR(31 downto 0);
             conditional_branchZ : in  STD_LOGIC;
             conditional_branchC : in  STD_LOGIC;
             conditional_branchN : in  STD_LOGIC;
-            mux_out             : out STD_LOGIC_VECTOR(31 downto 0)
+            ccr_out             : out STD_LOGIC_VECTOR(31 downto 0)
         );
     end component;
     
@@ -141,20 +148,26 @@ architecture Behavioral of Execute_Stage is
     signal alu_operand_a       : STD_LOGIC_VECTOR(31 downto 0);
     signal alu_operand_b       : STD_LOGIC_VECTOR(31 downto 0);
     signal alu_result_internal : STD_LOGIC_VECTOR(31 downto 0);
-    signal alu_zero_flag       : STD_LOGIC;
-    signal alu_carry_flag      : STD_LOGIC;
-    signal alu_neg_flag        : STD_LOGIC;
+    signal alu_zero_flag       : STD_LOGIC := '0';
+    signal alu_carry_flag      : STD_LOGIC := '0';
+    signal alu_neg_flag        : STD_LOGIC := '0';
+    signal alu_ccr_enable      : STD_LOGIC := '0';
     
-    signal ccr_register_out    : STD_LOGIC_VECTOR(31 downto 0);
-    signal ccr_mux_out         : STD_LOGIC_VECTOR(31 downto 0);
-    signal ccr_z_flag          : STD_LOGIC;
-    signal ccr_c_flag          : STD_LOGIC;
-    signal ccr_n_flag          : STD_LOGIC;
-    signal ccr_write_enable    : STD_LOGIC;
+    signal ccr_register_out    : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal ccr_mux_out         : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal ccr_z_flag          : STD_LOGIC := '0';
+    signal ccr_c_flag          : STD_LOGIC := '0';
+    signal ccr_n_flag          : STD_LOGIC := '0';
+    signal ccr_write_enable    : STD_LOGIC := '1';
     
-    signal cond_branchZ        : STD_LOGIC;
-    signal cond_branchC        : STD_LOGIC;
-    signal cond_branchN        : STD_LOGIC;
+    -- CCR source signals
+    signal ccr_from_alu        : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal ccr_from_branch     : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal ccr_from_stack      : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    
+    signal cond_branchZ        : STD_LOGIC := '0';
+    signal cond_branchC        : STD_LOGIC := '0';
+    signal cond_branchN        : STD_LOGIC := '0';
     
 begin
     
@@ -207,25 +220,100 @@ begin
             Result     => alu_result_internal,
             Zero_Flag  => alu_zero_flag,
             Carry_Flag => alu_carry_flag,
-            Neg_Flag   => alu_neg_flag
+            Neg_Flag   => alu_neg_flag,
+            CCR_Enable => alu_ccr_enable
         );
     
-    -- CCR write enable: always enabled (mux selects what to write)
-    ccr_write_enable <= '1';
+    -- ========================================
+    -- CCR (Condition Code Register) Logic
+    -- ========================================
     
-    -- CCR Multiplexer
-    ccr_mux_unit: CCR_Mux
+    -- Build CCR from ALU flags (Source 00)
+    -- Selectively update flags based on ALU operation
+    -- Different instructions update different flags:
+    --   SETC (0001): Updates C only
+    --   NOT  (0100): Updates Z, N only (preserves C)
+    --   INC  (0101): Updates Z, N, C
+    --   AND  (0110): Updates Z, N only (preserves C)
+    --   ADD  (1000): Updates Z, N, C
+    --   SUB  (1001): Updates Z, N only (preserves C)
+    process(alu_zero_flag, alu_carry_flag, alu_neg_flag, ccr_register_out, id_ex_alu_op)
+        variable new_z : STD_LOGIC;
+        variable new_c : STD_LOGIC;
+        variable new_n : STD_LOGIC;
+    begin
+        -- Default: keep current CCR values
+        new_z := ccr_register_out(0);  -- Current Z flag
+        new_c := ccr_register_out(1);  -- Current C flag
+        new_n := ccr_register_out(2);  -- Current N flag
+        
+        case id_ex_alu_op is
+            when "0001" =>  -- SETC: Only update C flag
+                new_c := alu_carry_flag;
+                
+            when "0100" =>  -- NOT: Update Z and N, preserve C
+                new_z := alu_zero_flag;
+                new_n := alu_neg_flag;
+                
+            when "0101" =>  -- INC: Update Z, N, and C
+                new_z := alu_zero_flag;
+                new_c := alu_carry_flag;
+                new_n := alu_neg_flag;
+                
+            when "0110" =>  -- AND: Update Z and N, preserve C
+                new_z := alu_zero_flag;
+                new_n := alu_neg_flag;
+                
+            when "1000" =>  -- ADD/IADD: Update Z, N, and C
+                new_z := alu_zero_flag;
+                new_c := alu_carry_flag;
+                new_n := alu_neg_flag;
+                
+            when "1001" =>  -- SUB: Update Z and N, preserve C
+                new_z := alu_zero_flag;
+                new_n := alu_neg_flag;
+                
+            when others =>
+                -- For other operations, keep current values
+                null;
+        end case;
+        
+        -- Construct 32-bit CCR value
+        ccr_from_alu <= "00000000000000000000000000000" & new_n & new_c & new_z;
+    end process;
+    
+    -- Build CCR from stack (Source 10) - for RTI
+    ccr_from_stack <= (others => '0');  -- TODO: Connect to actual stack data when available
+    
+    -- CCR Branch Unit (clears flags after conditional branch)
+    ccr_branch_inst: CCR_Branch_Unit
         port map (
-            selector            => id_ex_ccr_in,
-            alu_Z               => alu_zero_flag,
-            alu_C               => alu_carry_flag,
-            alu_N               => alu_neg_flag,
-            stack_data_in       => (others => '0'),  -- TODO: Connect to stack/memory data
+            current_ccr         => ccr_register_out,
             conditional_branchZ => cond_branchZ,
             conditional_branchC => cond_branchC,
             conditional_branchN => cond_branchN,
-            mux_out             => ccr_mux_out
+            ccr_out             => ccr_from_branch
         );
+    
+    -- CCR Multiplexer (selects which source to write to CCR)
+    ccr_mux_unit: CCR_Mux
+        port map (
+            selector   => id_ex_ccr_in,
+            ccr_alu    => ccr_from_alu,
+            ccr_branch => ccr_from_branch,
+            ccr_stack  => ccr_from_stack,
+            mux_out    => ccr_mux_out
+        );
+    
+    -- CCR write enable logic:
+    -- Enable when: 
+    --   - Selector = "00" AND ALU_CCR_Enable = '1' (ALU operations: NOT, INC, ADD, SUB, AND, SETC)
+    --   - Selector = "01" (Branch flag clearing: JZ, JC, JN)
+    --   - Selector = "10" (Stack restoration: RTI)
+    ccr_write_enable <= '1' when (id_ex_ccr_in = "00" and alu_ccr_enable = '1') else
+                        '1' when (id_ex_ccr_in = "01") else
+                        '1' when (id_ex_ccr_in = "10") else
+                        '0';
     
     -- CCR Register
     ccr_reg: CCR_Register

@@ -104,20 +104,22 @@ architecture Behavioral of Processor_Top_TB is
     -- Instruction memory (simplified)
     type mem_array is array (0 to 15) of STD_LOGIC_VECTOR(31 downto 0);
     signal instruction_memory : mem_array := (
-        0 => X"00000004",
+        0 => X"00000004",  -- Start at address 4
         1 => X"00000000",  -- NOP
         2 => X"00000000",  -- NOP
         3 => X"00000000",  -- NOP
-        4 => X"A4900000",  -- LDM R2, #5
-        5 => X"00000005",  -- Immediate value: 5
-        6 => X"A4D80000",  -- LDM R3, #3
-        7 => X"00000003",  -- Immediate value: 3
+        4 => X"A4900000",  -- LDM R2, #5  (Load immediate 5 into R2)
+        5 => X"00000035",  -- Immediate value: 5
+        6 => X"A4D80000",  -- LDM R3, #3  (Load immediate 3 into R3)
+        7 => X"80000000",  -- Immediate value: 3
         8 => X"00000000",  -- NOP
         9 => X"00000000",  -- NOP
         10 => X"00000000",  -- NOP
         11 => X"00000000",  -- NOP
-        12 => X"10530000",  -- ADD R1, R2, R3
-        13 => X"00000000",  -- NOP
+        12 => X"A2500000",  -- SUB R1, R3, R2  (R1 = R3 - R2 = 3 - 5 = -2, N flag should be 
+        13 => X"00000018",  -- NOP
+        14 => X"00000000",  -- NOP
+        15 => X"00000000",  -- NOP
         others => X"00000000"
     );
     

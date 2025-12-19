@@ -11,21 +11,22 @@ entity ALU is
         Result      : out STD_LOGIC_VECTOR(31 downto 0); -- ALU Output
         Zero_Flag   : out STD_LOGIC;                     -- Z Flag
         Carry_Flag  : out STD_LOGIC;                     -- C Flag
-        Neg_Flag    : out STD_LOGIC                      -- N Flag
+        Neg_Flag    : out STD_LOGIC;                     -- N Flag
+        CCR_Enable  : out STD_LOGIC                      -- Enable CCR update
     );
 end ALU;
 
 architecture Behavioral of ALU is
     -- 33-bit signal to capture carry/borrow
-    signal result_temp : unsigned(32 downto 0);
-    signal a_uns       : unsigned(32 downto 0);
-    signal b_uns       : unsigned(32 downto 0);
+    signal result_temp : unsigned(32 downto 0) := (others => '0');
+    signal a_uns       : unsigned(32 downto 0) := (others => '0');
+    signal b_uns       : unsigned(32 downto 0) := (others => '0');
 begin
     -- Extend inputs to 33 bits for carry calculation
     a_uns <= resize(unsigned(A), 33);
     b_uns <= resize(unsigned(B), 33);
 
-    process(A, B, ALU_Op, a_uns, b_uns, result_temp)
+    process(A, B, ALU_Op, a_uns, b_uns)
     begin
         -- Default: Result is 0
         result_temp <= (others => '0');
@@ -74,25 +75,42 @@ begin
     -- Flag Generation Process
     process(result_temp, ALU_Op)
     begin
-        -- Zero Flag
+        -- Zero Flag (default based on result)
         if (result_temp(31 downto 0) = x"00000000") then
             Zero_Flag <= '1';
         else
             Zero_Flag <= '0';
         end if;
 
-        -- Negative Flag
+        -- Negative Flag (default based on MSB)
         Neg_Flag <= result_temp(31);
 
-        -- Carry Flag
-        if ALU_Op = "0001" then 
-            -- SETC instruction explicitly sets Carry
-            Carry_Flag <= '1';
+        -- Carry Flag - Only updated by specific instructions
+        case ALU_Op is
+            when "0001" =>  -- SETC: Force carry to 1
+                Carry_Flag <= '1';
+                
+            when "0101" =>  -- INC: Updates carry
+                Carry_Flag <= result_temp(32);
+                
+            when "1000" =>  -- ADD (includes IADD): Updates carry
+                Carry_Flag <= result_temp(32);
+                
+            when others =>  -- All other operations: Don't change carry (output 0)
+                Carry_Flag <= '0';
+        end case;
+        
+        -- CCR Enable: Only these operations should update CCR
+        -- Instructions that modify flags: SETC, NOT, INC, AND, ADD, IADD, SUB
+        if (ALU_Op = "0001" or  -- SETC (C only)
+            ALU_Op = "0100" or  -- NOT (Z, N)
+            ALU_Op = "0101" or  -- INC (Z, N, C)
+            ALU_Op = "0110" or  -- AND (Z, N)
+            ALU_Op = "1000" or  -- ADD/IADD (Z, N, C)
+            ALU_Op = "1001") then -- SUB (Z, N only - NOT carry)
+            CCR_Enable <= '1';
         else
-            -- For ADD: Bit 32 is Carry Out
-            -- For SUB: Bit 32 is Borrow (1 if A < B)
-            -- For Logical Ops: Bit 32 is 0 (Cleared)
-            Carry_Flag <= result_temp(32);
+            CCR_Enable <= '0';
         end if;
     end process;
 

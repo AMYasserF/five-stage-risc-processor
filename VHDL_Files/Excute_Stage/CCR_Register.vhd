@@ -21,7 +21,7 @@ entity CCR_Register is
 end CCR_Register;
 
 architecture Behavioral of CCR_Register is
-    signal internal_reg : STD_LOGIC_VECTOR(31 downto 0);
+    signal internal_reg : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
 begin
 
     process(clk, rst)

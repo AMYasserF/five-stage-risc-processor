@@ -35,7 +35,12 @@ vcom -2008 Decode_Stage/ID_EX_register.vhd
 
 puts "\n=== Compiling Execute Stage Components ==="
 vcom -2008 Excute_Stage/ALU.vhd
+vcom -2008 Excute_Stage/ALU_OperandA_Mux.vhd
+vcom -2008 Excute_Stage/ALU_OperandB_Mux.vhd
+vcom -2008 Excute_Stage/Branch_Logic.vhd
 vcom -2008 Excute_Stage/CCR_Register.vhd
+vcom -2008 Excute_Stage/CCR_Branch_Unit.vhd
+vcom -2008 Excute_Stage/CCR_Mux.vhd
 vcom -2008 Excute_Stage/Execute_Stage.vhd
 vcom -2008 Excute_Stage/EX_MEM_Register.vhd
 
@@ -158,6 +163,29 @@ if {[catch {add wave -label "Carry Flag" /Processor_Top_TB/UUT/Execute/alu_carry
 if {[catch {add wave -label "Negative Flag" /Processor_Top_TB/UUT/Execute/alu_neg_flag}]} {puts "  Warning: Negative Flag not found"}
 
 # ========================================
+# CCR (Condition Code Register)
+# ========================================
+add wave -divider -height 25 "========== CCR LOGIC =========="
+puts "Adding CCR signals..."
+if {[catch {add wave -label "CCR Selector (00=ALU,01=Branch,10=Stack)" -radix binary /Processor_Top_TB/UUT/Execute/id_ex_ccr_in}]} {puts "  Warning: CCR selector not found"}
+if {[catch {add wave -label ">>> ALU CCR Enable <<<" /Processor_Top_TB/UUT/Execute/alu_ccr_enable}]} {puts "  Warning: ALU CCR Enable not found"}
+if {[catch {add wave -label ">>> CCR Write Enable <<<" /Processor_Top_TB/UUT/Execute/ccr_write_enable}]} {puts "  Warning: CCR write enable not found"}
+if {[catch {add wave -label "ALU Z Flag" /Processor_Top_TB/UUT/Execute/alu_zero_flag}]} {puts "  Warning: ALU Z flag not found"}
+if {[catch {add wave -label "ALU C Flag" /Processor_Top_TB/UUT/Execute/alu_carry_flag}]} {puts "  Warning: ALU C flag not found"}
+if {[catch {add wave -label "ALU N Flag" /Processor_Top_TB/UUT/Execute/alu_neg_flag}]} {puts "  Warning: ALU N flag not found"}
+if {[catch {add wave -label ">>> CCR from ALU <<<" -radix hex /Processor_Top_TB/UUT/Execute/ccr_from_alu}]} {puts "  Warning: CCR from ALU not found"}
+if {[catch {add wave -label "CCR from Branch" -radix hex /Processor_Top_TB/UUT/Execute/ccr_from_branch}]} {puts "  Warning: CCR from branch not found"}
+if {[catch {add wave -label ">>> CCR Mux Output (to Reg) <<<" -radix hex /Processor_Top_TB/UUT/Execute/ccr_mux_out}]} {puts "  Warning: CCR Mux output not found"}
+if {[catch {add wave -label "CCR Reg D_in" -radix hex /Processor_Top_TB/UUT/Execute/ccr_reg/D_in}]} {puts "  Warning: CCR Reg D_in not found"}
+if {[catch {add wave -label "CCR Reg wen" /Processor_Top_TB/UUT/Execute/ccr_reg/wen}]} {puts "  Warning: CCR Reg wen not found"}
+if {[catch {add wave -label "CCR Reg internal_reg" -radix hex /Processor_Top_TB/UUT/Execute/ccr_reg/internal_reg}]} {puts "  Warning: CCR Reg internal not found"}
+if {[catch {add wave -label "CCR Reg Q_out" -radix hex /Processor_Top_TB/UUT/Execute/ccr_reg/Q_out}]} {puts "  Warning: CCR Reg Q_out not found"}
+if {[catch {add wave -label "CCR Register Output" -radix hex /Processor_Top_TB/UUT/Execute/ccr_register_out}]} {puts "  Warning: CCR register output not found"}
+if {[catch {add wave -label "CCR Z Flag Output" /Processor_Top_TB/UUT/Execute/ccr_z_flag}]} {puts "  Warning: CCR Z flag output not found"}
+if {[catch {add wave -label "CCR C Flag Output" /Processor_Top_TB/UUT/Execute/ccr_c_flag}]} {puts "  Warning: CCR C flag output not found"}
+if {[catch {add wave -label "CCR N Flag Output" /Processor_Top_TB/UUT/Execute/ccr_n_flag}]} {puts "  Warning: CCR N flag output not found"}
+
+# ========================================
 # EX/MEM REGISTER
 # ========================================
 add wave -divider -height 25 "========== EX/MEM REGISTER =========="
@@ -223,6 +251,7 @@ puts "  DECODE:    Read Data 1 & 2"
 puts "  REG FILE:  R0-R7 (all registers)"
 puts "  ID/EX:     Read Data 1 & 2, Is Immediate"
 puts "  EXECUTE:   ALU Inputs (A,B), Operation, Result, Flags"
+puts "  CCR:       Selector, Mux Inputs/Output, Register I/O, Flags (Z,C,N)"
 puts "  EX/MEM:    ALU Result, Write Reg, Control Signals"
 puts "  MEMORY:    Address, Write Data, Read Data, Write/Read Enable, SP"
 puts "  MEM/WB:    ALU Result, Memory Data, Write Reg, Control Signals"
