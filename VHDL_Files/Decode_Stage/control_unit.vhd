@@ -32,7 +32,8 @@ entity control_unit is
            branchN               : out STD_LOGIC;                 -- Output: Branch if Negative flag (N)
            unconditional_branch  : out STD_LOGIC;                 -- Output: Unconditional Branch (JMP)
            has_one_operand       : out STD_LOGIC;                 -- Output: Instruction has one operand
-           has_two_operands      : out STD_LOGIC                  -- Output: Instruction has two operands
+           has_two_operands      : out STD_LOGIC;                -- Output: Instruction has two operands
+           alu_address_enable    : out STD_LOGIC                  -- Output: Use ALU result as address (LDD/STD)
            );
 end control_unit;
 
@@ -67,6 +68,7 @@ begin
         is_in                 <= '0';
         has_one_operand       <= '0';
         has_two_operands      <= '0';
+        alu_address_enable    <= '0';
         -- If previous_is_immediate is '1', set all control signals to '0' and ignore opcode
         if previous_is_immediate = '1' then
             -- All control signals are set to '0' by default (already done)
@@ -148,11 +150,13 @@ begin
                             mem_read <= '1';
                             mem_to_reg <= '1';
                             has_one_operand <= '1';
+                            alu_address_enable <= '1';
                         when "0100" =>  -- STD
                             alu_op <= "1000";  -- ADD (Rs2 + offset)
                             mem_write <= '1';
                             reg_write <= '0';
                             has_two_operands <= '1';
+                            alu_address_enable <= '1';
                         when others =>
                             alu_op <= "0000";  -- Default NOP
                     end case;

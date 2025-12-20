@@ -1,7 +1,7 @@
 # TCL script to compile and run the complete 5-stage processor testbench
 
 # Set working directory
-cd D:/CMP/Architecture/project/VHDL_Files
+cd D:/archProject/five-stage-risc-processor/VHDL_Files
 
 puts "======================================"
 puts "Compiling Complete 5-Stage Processor"

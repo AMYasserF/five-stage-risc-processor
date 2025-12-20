@@ -53,6 +53,7 @@ entity ID_EX_register is
         branchN_in            : in  STD_LOGIC;
         has_one_operand_in    : in  STD_LOGIC;
         has_two_operands_in   : in  STD_LOGIC;
+        alu_address_enable_in : in  STD_LOGIC;
         -- unconditional_branch is NOT passed (excluded as per requirement)
         
         -- Outputs to Execute Stage (EX)
@@ -92,7 +93,8 @@ entity ID_EX_register is
         branchC_out           : out STD_LOGIC;
         branchN_out           : out STD_LOGIC;
         has_one_operand_out   : out STD_LOGIC;
-        has_two_operands_out  : out STD_LOGIC
+        has_two_operands_out  : out STD_LOGIC;
+        alu_address_enable_out: out STD_LOGIC
     );
 end ID_EX_register;
 
@@ -131,6 +133,7 @@ architecture Behavioral of ID_EX_register is
     signal branchN_reg           : STD_LOGIC;
     signal has_one_operand_reg   : STD_LOGIC;
     signal has_two_operands_reg  : STD_LOGIC;
+    signal alu_address_enable_reg: STD_LOGIC;
     
 begin
     
@@ -171,6 +174,7 @@ begin
             branchN_reg         <= '0';
             has_one_operand_reg <= '0';
             has_two_operands_reg <= '0';
+            alu_address_enable_reg <= '0';
             
         elsif rising_edge(clk) then
             if flush = '1' then
@@ -205,6 +209,7 @@ begin
                 branchN_reg         <= '0';
                 has_one_operand_reg <= '0';
                 has_two_operands_reg <= '0';
+                alu_address_enable_reg <= '0';
             elsif enable = '1' and hlt = '0' then
                 -- Update pipeline registers only if enabled and not halted
                 pc_reg              <= pc_in_plus_1;
@@ -239,6 +244,7 @@ begin
                 branchN_reg         <= branchN_in;
                 has_one_operand_reg <= has_one_operand_in;
                 has_two_operands_reg <= has_two_operands_in;
+                alu_address_enable_reg <= alu_address_enable_in;
             end if;
             -- When hlt = '1' or enable = '0', all registers freeze (maintain current values)
         end if;
@@ -277,5 +283,6 @@ begin
     branchN_out         <= branchN_reg;
     has_one_operand_out <= has_one_operand_reg;
     has_two_operands_out <= has_two_operands_reg;
+    alu_address_enable_out <= alu_address_enable_reg;
     
 end Behavioral;

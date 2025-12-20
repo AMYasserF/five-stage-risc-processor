@@ -86,85 +86,98 @@ architecture Behavioral of Processor_Top_TB is
     -- Clock period
     constant clk_period : time := 10 ns;
     
-    -- Instruction memory (PUSH/POP test)
-    type mem_array is array (0 to 63) of STD_LOGIC_VECTOR(31 downto 0);
+    -- Instruction memory (LDD/STD test)
+    type mem_array is array (0 to 127) of STD_LOGIC_VECTOR(31 downto 0);
     signal instruction_memory : mem_array := (
         -- Address 0: pointer to program start (address 2)
         0 => X"00000002",
         1 => X"00000000",
 
         -- Program starts at address 2
-        -- Test PUSH and POP operations
+        -- Test LDD and STD operations
         
-        -- LDM R1, #0x1111 (load first test value)
+        -- LDM R1, #0xAAAA (load test value)
         2 => X"A4400000",  -- LDM R1
-        3 => X"00001111",
+        3 => X"0000AAAA",
         
         -- 3 NOPs for pipeline settling
         4 => X"00000000",
         5 => X"00000000",
         6 => X"00000000",
 
-        -- LDM R2, #0x2222 (load second test value)
+        -- LDM R2, #0xBBBB (load second test value)
         7 => X"A4800000",  -- LDM R2
-        8 => X"00002222",
+        8 => X"0000BBBB",
         
         -- 3 NOPs
         9 => X"00000000",
         10 => X"00000000",
         11 => X"00000000",
 
-        -- PUSH R1 (push 0x1111 onto stack)
-        12 => X"62080000",  -- PUSH R1
+        -- LDM R3, #50 (load base address for memory operations)
+        12 => X"A4C00000",  -- LDM R3
+        13 => X"00000032",  -- Address 50
         
         -- 3 NOPs
-        13 => X"00000000",
         14 => X"00000000",
         15 => X"00000000",
+        16 => X"00000000",
 
-        -- PUSH R2 (push 0x2222 onto stack)
-        16 => X"62100000",  -- PUSH R2
+        -- STD R1, R3, #0 (store R1 to memory[R3+0] = memory[50])
+        17 => X"A8190000",  --  
+        18 => X"00000000",  -- offset = 0
         
         -- 3 NOPs
-        17 => X"00000000",
-        18 => X"00000000",
         19 => X"00000000",
+        20 => X"00000000",
+        21 => X"00000000",
 
-        -- LDM R1, #0xAAAA (overwrite R1)
-        20 => X"A4400000",  -- LDM R1
-        21 => X"0000AAAA",
+        -- STD R2, R3, #2 (store R2 to memory[R3+2] = memory[52])
+        22 => X"A81A0000",  -- STD R2, R3, offset
+        23 => X"00000002",  -- offset = 2
         
         -- 3 NOPs
-        22 => X"00000000",
-        23 => X"00000000",
         24 => X"00000000",
+        25 => X"00000000",
+        26 => X"00000000",
 
-        -- LDM R2, #0xBBBB (overwrite R2)
-        25 => X"A4800000",  -- LDM R2
-        26 => X"0000BBBB",
-        
-        -- 3 NOPs
-        27 => X"00000000",
+        -- LDM R1, #0x0000 (clear R1)
+        27 => X"A4400000",  -- LDM R1
         28 => X"00000000",
-        29 => X"00000000",
-
-        -- POP R2 (should restore 0x2222 from stack)
-        30 => X"64800000",  -- POP R2
         
         -- 3 NOPs
+        29 => X"00000000",
+        30 => X"00000000",
         31 => X"00000000",
-        32 => X"00000000",
-        33 => X"00000000",
 
-        -- POP R1 (should restore 0x1111 from stack)
-        34 => X"64400000",  -- POP R1
+        -- LDM R2, #0x0000 (clear R2)
+        32 => X"A4800000",  -- LDM R2
+        33 => X"00000000",
         
-        -- 5 NOPs to observe final values
+        -- 3 NOPs
+        34 => X"00000000",
         35 => X"00000000",
         36 => X"00000000",
-        37 => X"00000000",
-        38 => X"00000000",
+
+        -- LDD R4, R3, #0 (load from memory[R3+0] to R4, should get 0xAAAA)
+        37 => X"A7180000",  -- LDD R4, R3, offset
+        38 => X"00000000",  -- offset = 0
+        
+        -- 3 NOPs
         39 => X"00000000",
+        40 => X"00000000",
+        41 => X"00000000",
+
+        -- LDD R5, R3, #2 (load from memory[R3+2] to R5, should get 0xBBBB)
+        42 => X"A7580000",  -- LDD R5, R3, offset
+        43 => X"00000002",  -- offset = 2
+        
+        -- 5 NOPs to observe final values
+        44 => X"00000000",
+        45 => X"00000000",
+        46 => X"00000000",
+        47 => X"00000000",
+        48 => X"00000000",
 
         others => X"00000000"
     );
@@ -217,8 +230,8 @@ begin
         wait for clk_period/2;
     end process;
     
-    -- Instruction memory read (use 6 bits to support addresses 0-63)
-    mem_read_data <= instruction_memory(to_integer(unsigned(mem_address(5 downto 0))));
+    -- Instruction memory read (use 7 bits to support addresses 0-127)
+    mem_read_data <= instruction_memory(to_integer(unsigned(mem_address(6 downto 0))));
     
     -- Stimulus
     stimulus: process
@@ -230,8 +243,8 @@ begin
         -- Release reset
         rst <= '0';
         
-        -- Run for 200 cycles to allow PUSH/POP test to complete
-        wait for clk_period * 200;
+        -- Run for 300 cycles to allow LDD/STD test to complete
+        wait for clk_period * 300;
         
         -- Stop simulation
         wait;

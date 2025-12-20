@@ -100,7 +100,13 @@ def assemble(lines):
             elif ins=="STD":
                 rd=0; rs1=reg(t[1]); rs2=reg(t[2]); imm=int(t[3],0)
 
-            mem.append(inst_word(op, rd, rs1, rs2))
+            # Swap rs1 and rs2 in machine code for STD only
+            # LDD: base register stays in rs1 (normal order)
+            # STD: swap so base register goes to rs1
+            if ins == "STD":
+                mem.append(inst_word(op, rd, rs2, rs1))
+            else:
+                mem.append(inst_word(op, rd, rs1, rs2))
             mem.append(imm & 0xffffffff)
 
         # ---------------- J TYPE ----------------
@@ -157,7 +163,7 @@ def write_mem(mem):
 
 if __name__=="__main__":
 
-    with open("program.asm",encoding="utf8") as f:
+    with open("p2.asm",encoding="utf8") as f:
         asm=f.readlines()
 
     mc=assemble(asm)

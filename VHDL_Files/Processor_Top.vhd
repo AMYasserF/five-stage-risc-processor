@@ -130,6 +130,7 @@ architecture Structural of Processor_Top is
             unconditional_branch : out STD_LOGIC;
             has_one_operand : out STD_LOGIC;
             has_two_operands : out STD_LOGIC;
+            alu_address_enable : out STD_LOGIC;
             pc_out_plus_1 : out STD_LOGIC_VECTOR(31 downto 0)
         );
     end component;
@@ -171,6 +172,7 @@ architecture Structural of Processor_Top is
             branchN_in : in STD_LOGIC;
             has_one_operand_in : in STD_LOGIC;
             has_two_operands_in : in STD_LOGIC;
+            alu_address_enable_in : in STD_LOGIC;
             pc_out_plus_1 : out STD_LOGIC_VECTOR(31 downto 0);
             read_data1_out : out STD_LOGIC_VECTOR(31 downto 0);
             read_data2_out : out STD_LOGIC_VECTOR(31 downto 0);
@@ -200,7 +202,8 @@ architecture Structural of Processor_Top is
             branchC_out : out STD_LOGIC;
             branchN_out : out STD_LOGIC;
             has_one_operand_out : out STD_LOGIC;
-            has_two_operands_out : out STD_LOGIC
+            has_two_operands_out : out STD_LOGIC;
+            alu_address_enable_out : out STD_LOGIC
         );
     end component;
     
@@ -238,6 +241,7 @@ architecture Structural of Processor_Top is
             id_ex_branchN : in STD_LOGIC;
             id_ex_has_one_operand : in STD_LOGIC;
             id_ex_has_two_operands : in STD_LOGIC;
+            id_ex_alu_address_enable : in STD_LOGIC;
             if_id_immediate : in STD_LOGIC_VECTOR(31 downto 0);
             forward_ex_mem : in STD_LOGIC_VECTOR(31 downto 0);
             forward_mem_wb : in STD_LOGIC_VECTOR(31 downto 0);
@@ -261,6 +265,7 @@ architecture Structural of Processor_Top is
             ex_mem_is_int : out STD_LOGIC;
             ex_mem_is_rti : out STD_LOGIC;
             ex_mem_hlt : out STD_LOGIC;
+            ex_mem_alu_address_enable : out STD_LOGIC;
             ex_mem_read_reg1 : out STD_LOGIC_VECTOR(2 downto 0);
             ex_mem_write_reg : out STD_LOGIC_VECTOR(2 downto 0);
             ex_mem_read_data2 : out STD_LOGIC_VECTOR(31 downto 0);
@@ -345,6 +350,7 @@ architecture Structural of Processor_Top is
             ex_is_in : in STD_LOGIC;
             ex_is_int : in STD_LOGIC;
             ex_is_rti : in STD_LOGIC;
+            ex_alu_address_enable : in STD_LOGIC;
             ex_read_reg1 : in STD_LOGIC_VECTOR(2 downto 0);
             ex_write_reg : in STD_LOGIC_VECTOR(2 downto 0);
             ex_read_data2 : in STD_LOGIC_VECTOR(31 downto 0);
@@ -369,6 +375,7 @@ architecture Structural of Processor_Top is
             mem_is_in : out STD_LOGIC;
             mem_is_int : out STD_LOGIC;
             mem_is_rti : out STD_LOGIC;
+            mem_alu_address_enable : out STD_LOGIC;
             mem_read_reg1 : out STD_LOGIC_VECTOR(2 downto 0);
             mem_write_reg : out STD_LOGIC_VECTOR(2 downto 0);
             mem_read_data2 : out STD_LOGIC_VECTOR(31 downto 0);
@@ -540,6 +547,7 @@ architecture Structural of Processor_Top is
     signal branchN_decode : STD_LOGIC;
     signal has_one_operand_decode : STD_LOGIC;
     signal has_two_operands_decode : STD_LOGIC;
+    signal alu_address_enable_decode : STD_LOGIC;
     signal pc_plus_1_from_decode : STD_LOGIC_VECTOR(31 downto 0);
     
     -- Signals from ID/EX to Execute Stage
@@ -573,6 +581,7 @@ architecture Structural of Processor_Top is
     signal idex_branchN : STD_LOGIC;
     signal idex_has_one_operand : STD_LOGIC;
     signal idex_has_two_operands : STD_LOGIC;
+    signal idex_alu_address_enable : STD_LOGIC;
     
     -- Jump control signals (direct connections, not pipelined)
     signal unconditional_branch_from_decode : STD_LOGIC;
@@ -597,6 +606,8 @@ architecture Structural of Processor_Top is
     signal exmem_is_in : STD_LOGIC;
     signal exmem_is_int : STD_LOGIC;
     signal exmem_is_rti : STD_LOGIC;
+    signal ex_mem_alu_address_enable : STD_LOGIC;
+    signal exmem_alu_address_enable : STD_LOGIC;
     signal exmem_read_reg1 : STD_LOGIC_VECTOR(2 downto 0);
     signal exmem_write_reg : STD_LOGIC_VECTOR(2 downto 0);
     signal exmem_read_data2 : STD_LOGIC_VECTOR(31 downto 0);
@@ -868,6 +879,7 @@ begin
             unconditional_branch => unconditional_branch_from_decode,
             has_one_operand => has_one_operand_decode,
             has_two_operands => has_two_operands_decode,
+            alu_address_enable => alu_address_enable_decode,
             pc_out_plus_1 => pc_plus_1_from_decode
         );
     
@@ -909,6 +921,7 @@ begin
             branchN_in => branchN_decode,
             has_one_operand_in => has_one_operand_decode,
             has_two_operands_in => has_two_operands_decode,
+            alu_address_enable_in => alu_address_enable_decode,
             pc_out_plus_1 => idex_pc_plus_1,
             read_data1_out => idex_read_data1,
             read_data2_out => idex_read_data2,
@@ -938,7 +951,8 @@ begin
             branchC_out => idex_branchC,
             branchN_out => idex_branchN,
             has_one_operand_out => idex_has_one_operand,
-            has_two_operands_out => idex_has_two_operands
+            has_two_operands_out => idex_has_two_operands,
+            alu_address_enable_out => idex_alu_address_enable
         );
     
     -- ==================== Execute Stage ====================
@@ -976,6 +990,7 @@ begin
             id_ex_branchN => idex_branchN,
             id_ex_has_one_operand => idex_has_one_operand,
             id_ex_has_two_operands => idex_has_two_operands,
+            id_ex_alu_address_enable => idex_alu_address_enable,
             if_id_immediate => instruction_decode_signal,
             forward_ex_mem => forward_ex_mem_data,
             forward_mem_wb => forward_mem_wb_data,
@@ -999,6 +1014,7 @@ begin
             ex_mem_is_int => ex_mem_is_int,
             ex_mem_is_rti => ex_mem_is_rti,
             ex_mem_hlt => ex_mem_hlt,
+            ex_mem_alu_address_enable => ex_mem_alu_address_enable,
             ex_mem_read_reg1 => ex_mem_read_reg1,
             ex_mem_write_reg => ex_mem_write_reg,
             ex_mem_read_data2 => ex_mem_read_data2,
@@ -1036,6 +1052,7 @@ begin
             ex_is_in => ex_mem_is_in,
             ex_is_int => ex_mem_is_int,
             ex_is_rti => ex_mem_is_rti,
+            ex_alu_address_enable => ex_mem_alu_address_enable,
             ex_read_reg1 => ex_mem_read_reg1,
             ex_write_reg => ex_mem_write_reg,
             ex_read_data2 => ex_mem_read_data2,
@@ -1061,6 +1078,7 @@ begin
             mem_is_in => exmem_is_in,
             mem_is_int => exmem_is_int,
             mem_is_rti => exmem_is_rti,
+            mem_alu_address_enable => exmem_alu_address_enable,
             mem_read_reg1 => exmem_read_reg1,
             mem_write_reg => exmem_write_reg,
             mem_read_data2 => exmem_read_data2,
@@ -1081,7 +1099,7 @@ begin
             mem_read => exmem_mem_read,
             mem_write => exmem_mem_write,
             is_push => exmem_is_push,
-            alu_address_enable => '1',  -- Assuming ALU result is always used for address when needed
+            alu_address_enable => exmem_alu_address_enable,
             mem_to_reg => exmem_mem_to_reg,
             is_pop => exmem_is_pop,
             out_enable => exmem_out_enable,

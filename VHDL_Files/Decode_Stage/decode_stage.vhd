@@ -64,6 +64,7 @@ entity decode_stage is
         unconditional_branch  : out STD_LOGIC;
         has_one_operand       : out STD_LOGIC;
         has_two_operands      : out STD_LOGIC;
+        alu_address_enable    : out STD_LOGIC;
         
         -- PC+1 to pass to Execute Stage
         pc_out_plus_1         : out STD_LOGIC_VECTOR(31 downto 0)
@@ -117,7 +118,8 @@ architecture Behavioral of decode_stage is
             branchN               : out STD_LOGIC;
             unconditional_branch  : out STD_LOGIC;
             has_one_operand       : out STD_LOGIC;
-            has_two_operands      : out STD_LOGIC
+            has_two_operands      : out STD_LOGIC;
+            alu_address_enable    : out STD_LOGIC
         );
     end component;
     
@@ -189,7 +191,8 @@ begin
             branchN               => branchN,
             unconditional_branch  => unconditional_branch,
             has_one_operand       => has_one_operand,
-            has_two_operands      => has_two_operands
+            has_two_operands      => has_two_operands,
+            alu_address_enable    => alu_address_enable
         );
     
     -- Output halt signal

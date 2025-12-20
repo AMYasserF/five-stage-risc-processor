@@ -146,6 +146,7 @@ if {[catch {add wave -label "Read Data 2" -radix hex /Processor_Top_TB/UUT/read_
 # ========================================
 add wave -divider -height 25 "========== CONTROL UNIT =========="
 puts "Adding Control Unit signals..."
+if {[catch {add wave -label ">>> ALU Address Enable (Decode Output) <<<" -color Cyan /Processor_Top_TB/UUT/Decode/ctrl_unit/alu_address_enable}]} {puts "  Warning: ALU Address Enable from CU not found"}
 if {[catch {add wave -label ">>> Is PUSH <<<" /Processor_Top_TB/UUT/Decode/ctrl_unit/is_push}]} {puts "  Warning: Is PUSH not found"}
 if {[catch {add wave -label ">>> Is POP <<<" /Processor_Top_TB/UUT/Decode/ctrl_unit/is_pop}]} {puts "  Warning: Is POP not found"}
 if {[catch {add wave -label ">>> Mem Write <<<" /Processor_Top_TB/UUT/Decode/ctrl_unit/mem_write}]} {puts "  Warning: Mem Write not found"}
@@ -180,6 +181,9 @@ if {[catch {
 # ========================================
 add wave -divider -height 25 "========== ID/EX REGISTER =========="
 puts "Adding ID/EX signals..."
+if {[catch {add wave -label ">>> ALU Address Enable IN <<<" -color Cyan /Processor_Top_TB/UUT/IDEX_Reg/alu_address_enable_in}]} {puts "  Warning: alu_address_enable_in not found"}
+if {[catch {add wave -label ">>> ALU Address Enable OUT <<<" -color Cyan /Processor_Top_TB/UUT/IDEX_Reg/alu_address_enable_out}]} {puts "  Warning: alu_address_enable_out not found"}
+if {[catch {add wave -label ">>> ALU Address Enable REG <<<" -color Cyan /Processor_Top_TB/UUT/IDEX_Reg/alu_address_enable_reg}]} {puts "  Warning: alu_address_enable_reg not found"}
 if {[catch {add wave -label "Read Data 1" -radix hex /Processor_Top_TB/UUT/idex_read_data1}]} {puts "  Warning: Read Data 1 not found"}
 if {[catch {add wave -label "Read Data 2" -radix hex /Processor_Top_TB/UUT/idex_read_data2}]} {puts "  Warning: Read Data 2 not found"}
 if {[catch {add wave -label "Is Immediate" /Processor_Top_TB/UUT/idex_is_immediate}]} {puts "  Warning: Is Immediate not found"}
@@ -189,6 +193,8 @@ if {[catch {add wave -label "Is Immediate" /Processor_Top_TB/UUT/idex_is_immedia
 # ========================================
 add wave -divider -height 25 "========== EXECUTE STAGE (ALU) =========="
 puts "Adding Execute signals..."
+if {[catch {add wave -label ">>> ALU Address Enable IN (from ID/EX) <<<" -color Cyan /Processor_Top_TB/UUT/Execute/id_ex_alu_address_enable}]} {puts "  Warning: id_ex_alu_address_enable not found"}
+if {[catch {add wave -label ">>> ALU Address Enable OUT (to EX/MEM) <<<" -color Cyan /Processor_Top_TB/UUT/Execute/ex_mem_alu_address_enable}]} {puts "  Warning: ex_mem_alu_address_enable not found"}
 if {[catch {add wave -label "ALU Operand A (Input)" -radix hex /Processor_Top_TB/UUT/Execute/alu_operand_a}]} {puts "  Warning: ALU Operand A not found"}
 if {[catch {add wave -label "ALU Operand B (Input)" -radix hex /Processor_Top_TB/UUT/Execute/alu_operand_b}]} {puts "  Warning: ALU Operand B not found"}
 if {[catch {add wave -label "ALU Operation" -radix hex /Processor_Top_TB/UUT/Execute/id_ex_alu_op}]} {puts "  Warning: ALU Operation not found"}
@@ -225,6 +231,8 @@ if {[catch {add wave -label "CCR N Flag Output" /Processor_Top_TB/UUT/Execute/cc
 # ========================================
 add wave -divider -height 25 "========== EX/MEM REGISTER =========="
 puts "Adding EX/MEM signals..."
+if {[catch {add wave -label ">>> ALU Address Enable IN <<<" -color Cyan /Processor_Top_TB/UUT/EXMEM_Reg/ex_alu_address_enable}]} {puts "  Warning: ex_alu_address_enable not found"}
+if {[catch {add wave -label ">>> ALU Address Enable OUT <<<" -color Cyan /Processor_Top_TB/UUT/EXMEM_Reg/mem_alu_address_enable}]} {puts "  Warning: mem_alu_address_enable not found"}
 if {[catch {add wave -label "ALU Result" -radix hex /Processor_Top_TB/UUT/exmem_alu_result}]} {puts "  Warning: ALU Result not found"}
 if {[catch {add wave -label "Write Reg" -radix unsigned /Processor_Top_TB/UUT/exmem_write_reg}]} {puts "  Warning: Write Reg not found"}
 if {[catch {add wave -label "Reg Write Enable" /Processor_Top_TB/UUT/exmem_reg_write}]} {puts "  Warning: Reg Write Enable not found"}
@@ -236,8 +244,15 @@ if {[catch {add wave -label "Mem Read" /Processor_Top_TB/UUT/exmem_mem_read}]} {
 # ========================================
 add wave -divider -height 25 "========== MEMORY STAGE =========="
 puts "Adding Memory signals..."
+if {[catch {add wave -label ">>> ALU Address Enable (to Control Unit) <<<" -color Cyan /Processor_Top_TB/UUT/Memory/alu_address_enable}]} {puts "  Warning: alu_address_enable not found"}
+if {[catch {add wave -label ">>> Memory Address Control: ALU Enable Input <<<" -color Cyan /Processor_Top_TB/UUT/Memory/Mem_Addr_CU/alu_address_enable}]} {puts "  Warning: Mem_Addr_CU alu_address_enable not found"}
 if {[catch {add wave -label "ALU Result (Input)" -radix hex /Processor_Top_TB/UUT/Memory/alu_result}]} {puts "  Warning: ALU Result not found"}
+if {[catch {add wave -label ">>> ALU Address Enable (LDD/STD) <<<" -color Magenta /Processor_Top_TB/UUT/Memory/alu_address_enable}]} {puts "  Warning: ALU Address Enable not found"}
 if {[catch {add wave -label "Memory Address" -radix hex /Processor_Top_TB/UUT/Memory/mem_address}]} {puts "  Warning: Memory Address not found"}
+if {[catch {add wave -label ">>> Memory Address Mux Selector <<<" -radix binary -color Yellow /Processor_Top_TB/UUT/Memory/mem_addr_mux_sel}]} {puts "  Warning: Memory Address Mux Selector not found"}
+if {[catch {add wave -label "Memory Address Mux - ALU Input" -radix hex /Processor_Top_TB/UUT/Memory/Mem_Addr_Mux/alu_address}]} {puts "  Warning: Mux ALU Input not found"}
+if {[catch {add wave -label "Memory Address Mux - SP Input" -radix hex /Processor_Top_TB/UUT/Memory/Mem_Addr_Mux/sp_address}]} {puts "  Warning: Mux SP Input not found"}
+if {[catch {add wave -label "Memory Address Mux - PC Input" -radix hex /Processor_Top_TB/UUT/Memory/Mem_Addr_Mux/pc_address}]} {puts "  Warning: Mux PC Input not found"}
 if {[catch {add wave -label "Memory Write Data" -radix hex /Processor_Top_TB/UUT/Memory/mem_write_data}]} {puts "  Warning: Memory Write Data not found"}
 if {[catch {add wave -label "Memory Data (Output)" -radix hex /Processor_Top_TB/UUT/Memory/mem_data_out}]} {puts "  Warning: Memory Data not found"}
 if {[catch {add wave -label ">>> Memory Read Enable <<<" /Processor_Top_TB/UUT/Memory/actual_mem_read}]} {puts "  Warning: Memory Read not found"}

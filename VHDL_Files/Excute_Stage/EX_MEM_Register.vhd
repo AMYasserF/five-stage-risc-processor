@@ -31,6 +31,7 @@ entity EX_MEM_Register is
         ex_is_in           : in  STD_LOGIC;
         ex_is_int          : in  STD_LOGIC;
         ex_is_rti          : in  STD_LOGIC;
+        ex_alu_address_enable: in STD_LOGIC;
         
         -- Data from Execute stage
         ex_read_reg1       : in  STD_LOGIC_VECTOR(2 downto 0);
@@ -59,6 +60,7 @@ entity EX_MEM_Register is
         mem_is_in          : out STD_LOGIC;
         mem_is_int         : out STD_LOGIC;
         mem_is_rti         : out STD_LOGIC;
+        mem_alu_address_enable: out STD_LOGIC;
         
         -- Data outputs
         mem_read_reg1      : out STD_LOGIC_VECTOR(2 downto 0);
@@ -95,6 +97,7 @@ begin
             mem_is_in      <= '0';
             mem_is_int     <= '0';
             mem_is_rti     <= '0';
+            mem_alu_address_enable <= '0';
             
             -- Reset data
             mem_read_reg1       <= (others => '0');
@@ -126,6 +129,7 @@ begin
                 mem_is_in      <= '0';
                 mem_is_int     <= '0';
                 mem_is_rti     <= '0';
+                mem_alu_address_enable <= '0';
                 mem_read_reg1       <= (others => '0');
                 mem_write_reg       <= (others => '0');
                 mem_read_data2      <= (others => '0');
@@ -152,6 +156,7 @@ begin
             mem_is_in      <= ex_is_in;
             mem_is_int     <= ex_is_int;
             mem_is_rti     <= ex_is_rti;
+            mem_alu_address_enable <= ex_alu_address_enable;
             
             -- Register data
             mem_read_reg1       <= ex_read_reg1;
