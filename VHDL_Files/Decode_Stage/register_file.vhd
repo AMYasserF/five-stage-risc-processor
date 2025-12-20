@@ -37,9 +37,14 @@ architecture Behavioral of register_file is
     signal registers : reg_array := (others => (others => '0'));  -- Initialize all registers to zero
     
 begin
-    -- Read process (asynchronous read)
-    read_data1 <= registers(to_integer(unsigned(read_reg1)));
-    read_data2 <= registers(to_integer(unsigned(read_reg2)));
+    -- Read process (synchronous read on falling edge)
+    process(clk)
+    begin
+        if falling_edge(clk) then
+            read_data1 <= registers(to_integer(unsigned(read_reg1)));
+            read_data2 <= registers(to_integer(unsigned(read_reg2)));
+        end if;
+    end process;
     
     -- Write process (synchronous write on rising edge)
     -- Halt signal freezes all register writes until reset
