@@ -42,6 +42,8 @@ entity Execute_Stage is
         id_ex_branchZ          : in  STD_LOGIC;
         id_ex_branchC          : in  STD_LOGIC;
         id_ex_branchN          : in  STD_LOGIC;
+        id_ex_has_one_operand  : in  STD_LOGIC;
+        id_ex_has_two_operands : in  STD_LOGIC;
         
         -- Immediate value from IF/ID Pipeline Register
         if_id_immediate        : in  STD_LOGIC_VECTOR(31 downto 0);
@@ -78,6 +80,8 @@ entity Execute_Stage is
         ex_mem_read_data2      : out STD_LOGIC_VECTOR(31 downto 0);
         ex_mem_alu_result      : out STD_LOGIC_VECTOR(31 downto 0);
         ex_mem_input_port_data : out STD_LOGIC_VECTOR(31 downto 0);
+        ex_mem_has_one_operand : out STD_LOGIC;
+        ex_mem_has_two_operands: out STD_LOGIC;
         
         -- Direct outputs (not to EX/MEM register)
         conditional_jump       : out STD_LOGIC;  -- OR of all conditional branches
@@ -384,5 +388,9 @@ begin
     
     -- Input port data output (for IN instruction)
     ex_mem_input_port_data <= input_port;
+    
+    -- Pass-through operand count signals
+    ex_mem_has_one_operand <= id_ex_has_one_operand;
+    ex_mem_has_two_operands <= id_ex_has_two_operands;
     
 end Behavioral;

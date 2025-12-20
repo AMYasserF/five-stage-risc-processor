@@ -11,6 +11,8 @@ entity ID_EX_register is
     Port (
         clk                   : in  STD_LOGIC;
         rst                   : in  STD_LOGIC;
+        enable                : in  STD_LOGIC;  -- Enable signal
+        flush                 : in  STD_LOGIC;  -- Flush signal
         hlt                   : in  STD_LOGIC;  -- Halt signal freezes pipeline
         
         -- Inputs from Decode Stage (ID)
@@ -49,6 +51,8 @@ entity ID_EX_register is
         branchZ_in            : in  STD_LOGIC;
         branchC_in            : in  STD_LOGIC;
         branchN_in            : in  STD_LOGIC;
+        has_one_operand_in    : in  STD_LOGIC;
+        has_two_operands_in   : in  STD_LOGIC;
         -- unconditional_branch is NOT passed (excluded as per requirement)
         
         -- Outputs to Execute Stage (EX)
@@ -86,7 +90,9 @@ entity ID_EX_register is
         is_ret_out            : out STD_LOGIC;
         branchZ_out           : out STD_LOGIC;
         branchC_out           : out STD_LOGIC;
-        branchN_out           : out STD_LOGIC
+        branchN_out           : out STD_LOGIC;
+        has_one_operand_out   : out STD_LOGIC;
+        has_two_operands_out  : out STD_LOGIC
     );
 end ID_EX_register;
 
@@ -123,6 +129,8 @@ architecture Behavioral of ID_EX_register is
     signal branchZ_reg           : STD_LOGIC;
     signal branchC_reg           : STD_LOGIC;
     signal branchN_reg           : STD_LOGIC;
+    signal has_one_operand_reg   : STD_LOGIC;
+    signal has_two_operands_reg  : STD_LOGIC;
     
 begin
     
@@ -161,10 +169,44 @@ begin
             branchZ_reg         <= '0';
             branchC_reg         <= '0';
             branchN_reg         <= '0';
+            has_one_operand_reg <= '0';
+            has_two_operands_reg <= '0';
             
         elsif rising_edge(clk) then
-            if hlt = '0' then
-                -- Update pipeline registers only if not halted
+            if flush = '1' then
+                -- Flush: Clear all registers (insert bubble/NOP)
+                pc_reg              <= (others => '0');
+                read_data1_reg      <= (others => '0');
+                read_data2_reg      <= (others => '0');
+                read_reg1_reg       <= (others => '0');
+                write_reg_reg       <= (others => '0');
+                mem_write_reg       <= '0';
+                mem_read_reg        <= '0';
+                mem_to_reg_reg      <= '0';
+                alu_op_reg          <= (others => '0');
+                out_enable_reg      <= '0';
+                ccr_in_reg          <= (others => '0');
+                is_swap_reg         <= '0';
+                swap_phase_reg      <= '0';
+                reg_write_reg       <= '0';
+                is_immediate_reg    <= '0';
+                is_call_reg         <= '0';
+                hlt_reg             <= '0';
+                is_int_reg          <= '0';
+                is_in_reg           <= '0';
+                is_pop_reg          <= '0';
+                is_push_reg         <= '0';
+                int_phase_reg       <= '0';
+                is_rti_reg          <= '0';
+                rti_phase_reg       <= '0';
+                is_ret_reg          <= '0';
+                branchZ_reg         <= '0';
+                branchC_reg         <= '0';
+                branchN_reg         <= '0';
+                has_one_operand_reg <= '0';
+                has_two_operands_reg <= '0';
+            elsif enable = '1' and hlt = '0' then
+                -- Update pipeline registers only if enabled and not halted
                 pc_reg              <= pc_in_plus_1;
                 read_data1_reg      <= read_data1_in;
                 read_data2_reg      <= read_data2_in;
@@ -195,8 +237,10 @@ begin
                 branchZ_reg         <= branchZ_in;
                 branchC_reg         <= branchC_in;
                 branchN_reg         <= branchN_in;
+                has_one_operand_reg <= has_one_operand_in;
+                has_two_operands_reg <= has_two_operands_in;
             end if;
-            -- When hlt = '1', all registers freeze (maintain current values)
+            -- When hlt = '1' or enable = '0', all registers freeze (maintain current values)
         end if;
     end process;
     
@@ -231,5 +275,7 @@ begin
     branchZ_out         <= branchZ_reg;
     branchC_out         <= branchC_reg;
     branchN_out         <= branchN_reg;
+    has_one_operand_out <= has_one_operand_reg;
+    has_two_operands_out <= has_two_operands_reg;
     
 end Behavioral;

@@ -44,8 +44,11 @@ begin
         elsif int_write_pc = '1' or is_call = '1' then
             -- INT (PC phase) or CALL: store PC
             mem_write_data_sel <= "00";
-        elsif is_push = '1' or is_pop = '1' or alu_address_enable = '1' then
-            -- PUSH, POP, or STD: store Rsrc2
+        elsif is_push = '1' then
+            -- PUSH: store Rsrc1 (the register being pushed)
+            mem_write_data_sel <= "11";
+        elsif is_pop = '1' or alu_address_enable = '1' then
+            -- POP or STD: store Rsrc2
             mem_write_data_sel <= "01";
         else
             -- Default: Rsrc2

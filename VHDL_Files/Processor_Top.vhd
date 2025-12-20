@@ -11,11 +11,6 @@ entity Processor_Top is
         clk : in STD_LOGIC;
         rst : in STD_LOGIC;
         
-        -- Control Signals
-        pc_enable : in STD_LOGIC;
-        ifid_enable : in STD_LOGIC;
-        ifid_flush : in STD_LOGIC;
-        
         -- Memory System Interface (for instruction fetch)
         mem_address : out STD_LOGIC_VECTOR(31 downto 0);
         mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);
@@ -133,6 +128,8 @@ architecture Structural of Processor_Top is
             branchC : out STD_LOGIC;
             branchN : out STD_LOGIC;
             unconditional_branch : out STD_LOGIC;
+            has_one_operand : out STD_LOGIC;
+            has_two_operands : out STD_LOGIC;
             pc_out_plus_1 : out STD_LOGIC_VECTOR(31 downto 0)
         );
     end component;
@@ -141,6 +138,8 @@ architecture Structural of Processor_Top is
         Port (
             clk : in STD_LOGIC;
             rst : in STD_LOGIC;
+            enable : in STD_LOGIC;
+            flush : in STD_LOGIC;
             hlt : in STD_LOGIC;
             pc_in_plus_1 : in STD_LOGIC_VECTOR(31 downto 0);
             read_data1_in : in STD_LOGIC_VECTOR(31 downto 0);
@@ -170,6 +169,8 @@ architecture Structural of Processor_Top is
             branchZ_in : in STD_LOGIC;
             branchC_in : in STD_LOGIC;
             branchN_in : in STD_LOGIC;
+            has_one_operand_in : in STD_LOGIC;
+            has_two_operands_in : in STD_LOGIC;
             pc_out_plus_1 : out STD_LOGIC_VECTOR(31 downto 0);
             read_data1_out : out STD_LOGIC_VECTOR(31 downto 0);
             read_data2_out : out STD_LOGIC_VECTOR(31 downto 0);
@@ -197,7 +198,9 @@ architecture Structural of Processor_Top is
             is_ret_out : out STD_LOGIC;
             branchZ_out : out STD_LOGIC;
             branchC_out : out STD_LOGIC;
-            branchN_out : out STD_LOGIC
+            branchN_out : out STD_LOGIC;
+            has_one_operand_out : out STD_LOGIC;
+            has_two_operands_out : out STD_LOGIC
         );
     end component;
     
@@ -233,6 +236,8 @@ architecture Structural of Processor_Top is
             id_ex_branchZ : in STD_LOGIC;
             id_ex_branchC : in STD_LOGIC;
             id_ex_branchN : in STD_LOGIC;
+            id_ex_has_one_operand : in STD_LOGIC;
+            id_ex_has_two_operands : in STD_LOGIC;
             if_id_immediate : in STD_LOGIC_VECTOR(31 downto 0);
             forward_ex_mem : in STD_LOGIC_VECTOR(31 downto 0);
             forward_mem_wb : in STD_LOGIC_VECTOR(31 downto 0);
@@ -261,6 +266,8 @@ architecture Structural of Processor_Top is
             ex_mem_read_data2 : out STD_LOGIC_VECTOR(31 downto 0);
             ex_mem_alu_result : out STD_LOGIC_VECTOR(31 downto 0);
             ex_mem_input_port_data : out STD_LOGIC_VECTOR(31 downto 0);
+            ex_mem_has_one_operand : out STD_LOGIC;
+            ex_mem_has_two_operands : out STD_LOGIC;
             conditional_jump : out STD_LOGIC;
             pc_plus_2 : out STD_LOGIC_VECTOR(31 downto 0)
         );
@@ -318,6 +325,8 @@ architecture Structural of Processor_Top is
         Port (
             clk : in STD_LOGIC;
             rst : in STD_LOGIC;
+            enable : in STD_LOGIC;
+            flush : in STD_LOGIC;
             ex_rti_phase : in STD_LOGIC;
             ex_int_phase : in STD_LOGIC;
             ex_mem_write : in STD_LOGIC;
@@ -529,6 +538,8 @@ architecture Structural of Processor_Top is
     signal branchZ_decode : STD_LOGIC;
     signal branchC_decode : STD_LOGIC;
     signal branchN_decode : STD_LOGIC;
+    signal has_one_operand_decode : STD_LOGIC;
+    signal has_two_operands_decode : STD_LOGIC;
     signal pc_plus_1_from_decode : STD_LOGIC_VECTOR(31 downto 0);
     
     -- Signals from ID/EX to Execute Stage
@@ -560,6 +571,8 @@ architecture Structural of Processor_Top is
     signal idex_branchZ : STD_LOGIC;
     signal idex_branchC : STD_LOGIC;
     signal idex_branchN : STD_LOGIC;
+    signal idex_has_one_operand : STD_LOGIC;
+    signal idex_has_two_operands : STD_LOGIC;
     
     -- Jump control signals (direct connections, not pipelined)
     signal unconditional_branch_from_decode : STD_LOGIC;
@@ -590,6 +603,8 @@ architecture Structural of Processor_Top is
     signal exmem_alu_result : STD_LOGIC_VECTOR(31 downto 0);
     signal exmem_input_port_data : STD_LOGIC_VECTOR(31 downto 0);
     signal exmem_pc_plus_1 : STD_LOGIC_VECTOR(31 downto 0);
+    signal exmem_has_one_operand : STD_LOGIC;
+    signal exmem_has_two_operands : STD_LOGIC;
     
     -- Signals from Execute Stage outputs (before EX/MEM register)
     signal execute_input_port_data : STD_LOGIC_VECTOR(31 downto 0);
@@ -653,10 +668,14 @@ architecture Structural of Processor_Top is
     signal output_port_registered : STD_LOGIC_VECTOR(31 downto 0); -- Registered output
     signal output_port_enable : STD_LOGIC; -- Enable for output register
     
-    -- Internal signals for HDU outputs (initialized to enable pipeline since HDU is not bound)
+    -- Internal signals for HDU outputs
     signal hdu_pc_enable : STD_LOGIC := '1';
     signal hdu_ifid_enable : STD_LOGIC := '1';
     signal hdu_ifid_flush : STD_LOGIC := '0';
+    signal hdu_idex_enable : STD_LOGIC := '1';
+    signal hdu_idex_flush : STD_LOGIC := '0';
+    signal hdu_exmem_enable : STD_LOGIC := '1';
+    signal hdu_exmem_flush : STD_LOGIC := '0';
     
     signal unused : STD_LOGIC := '0';
     signal unused_2bits : STD_LOGIC_VECTOR(1 downto 0) := "00";
@@ -756,10 +775,10 @@ begin
 	        mem_is_pop => exmem_is_pop,
 	        mem_rdst => exmem_write_reg,
 	        ex_rsrc1 => idex_read_reg1,
-	        ex_rsrc2 => unused_3bits,
+	        ex_rsrc2 => idex_write_reg,
 	        ex_is_conditional => conditional_jump_from_execute,
-	        ex_has_one_operand => unused,
-	        ex_has_two_operands => unused,
+	        ex_has_one_operand => idex_has_one_operand,
+	        ex_has_two_operands => idex_has_two_operands,
 	        mem_is_int => exmem_is_int,
 	        mem_is_ret => exmem_is_ret,
 	        mem_is_rti => exmem_is_rti,
@@ -768,11 +787,11 @@ begin
 	        mem_int_phase => unused_2bits,
 	        mem_rti_phase => exmem_rti_phase,
 	        if_flush => hdu_ifid_flush,
-	        id_flush => unused,
-	        ex_flush => unused,
+	        id_flush => hdu_idex_flush,
+	        ex_flush => hdu_exmem_flush,
 	        if_id_enable => hdu_ifid_enable,
-	        id_ex_enable => unused,
-	        ex_mem_enable => unused,
+	        id_ex_enable => hdu_idex_enable,
+	        ex_mem_enable => hdu_exmem_enable,
 	        pc_enable => hdu_pc_enable
        );
     
@@ -801,8 +820,8 @@ begin
         port map (
             clk => clk,
             rst => rst,
-            enable => ifid_enable,
-            flush => ifid_flush,
+            enable => hdu_ifid_enable,
+            flush => hdu_ifid_flush,
             instruction_in => instruction_fetch_signal,
             pc_plus_1_in => pc_plus_1_fetch_signal,
             instruction_out => instruction_decode_signal,
@@ -847,6 +866,8 @@ begin
             branchC => branchC_decode,
             branchN => branchN_decode,
             unconditional_branch => unconditional_branch_from_decode,
+            has_one_operand => has_one_operand_decode,
+            has_two_operands => has_two_operands_decode,
             pc_out_plus_1 => pc_plus_1_from_decode
         );
     
@@ -855,6 +876,8 @@ begin
         port map (
             clk => clk,
             rst => rst,
+            enable => hdu_idex_enable,
+            flush => hdu_idex_flush,
             hlt => hlt_decode,
             pc_in_plus_1 => pc_plus_1_from_decode,
             read_data1_in => read_data1_decode,
@@ -884,6 +907,8 @@ begin
             branchZ_in => branchZ_decode,
             branchC_in => branchC_decode,
             branchN_in => branchN_decode,
+            has_one_operand_in => has_one_operand_decode,
+            has_two_operands_in => has_two_operands_decode,
             pc_out_plus_1 => idex_pc_plus_1,
             read_data1_out => idex_read_data1,
             read_data2_out => idex_read_data2,
@@ -911,7 +936,9 @@ begin
             is_ret_out => idex_is_ret,
             branchZ_out => idex_branchZ,
             branchC_out => idex_branchC,
-            branchN_out => idex_branchN
+            branchN_out => idex_branchN,
+            has_one_operand_out => idex_has_one_operand,
+            has_two_operands_out => idex_has_two_operands
         );
     
     -- ==================== Execute Stage ====================
@@ -947,6 +974,8 @@ begin
             id_ex_branchZ => idex_branchZ,
             id_ex_branchC => idex_branchC,
             id_ex_branchN => idex_branchN,
+            id_ex_has_one_operand => idex_has_one_operand,
+            id_ex_has_two_operands => idex_has_two_operands,
             if_id_immediate => instruction_decode_signal,
             forward_ex_mem => forward_ex_mem_data,
             forward_mem_wb => forward_mem_wb_data,
@@ -975,6 +1004,8 @@ begin
             ex_mem_read_data2 => ex_mem_read_data2,
             ex_mem_alu_result => ex_mem_alu_result,
             ex_mem_input_port_data => execute_input_port_data,
+            ex_mem_has_one_operand => exmem_has_one_operand,
+            ex_mem_has_two_operands => exmem_has_two_operands,
             conditional_jump => conditional_jump_from_execute,
             pc_plus_2 => pc_plus_2
         );
@@ -984,30 +1015,34 @@ begin
         port map (
             clk => clk,
             rst => rst,
-            ex_rti_phase => exmem_rti_phase,
-            ex_int_phase => exmem_int_phase,
-            ex_mem_write => exmem_mem_write,
-            ex_mem_read => exmem_mem_read,
-            ex_mem_to_reg => exmem_mem_to_reg,
+            enable => hdu_exmem_enable,
+            flush => hdu_exmem_flush,
+            -- INPUTS: Connect to Execute Stage outputs (ex_mem_*)
+            ex_rti_phase => ex_mem_rti_phase,
+            ex_int_phase => ex_mem_int_phase,
+            ex_mem_write => ex_mem_mem_write,
+            ex_mem_read => ex_mem_mem_read,
+            ex_mem_to_reg => ex_mem_mem_to_reg,
             ex_alu_op => (others => '0'),  -- Not used in attached files, set to 0
-            ex_out_enable => exmem_out_enable,
-            ex_is_swap => exmem_is_swap,
-            ex_swap_phase => exmem_swap_phase,
-            ex_reg_write => exmem_reg_write,
-            ex_is_call => exmem_is_call,
-            ex_is_ret => exmem_is_ret,
-            ex_is_push => exmem_is_push,
-            ex_is_pop => exmem_is_pop,
-            ex_hlt => exmem_hlt,
-            ex_is_in => exmem_is_in,
-            ex_is_int => exmem_is_int,
-            ex_is_rti => exmem_is_rti,
-            ex_read_reg1 => exmem_read_reg1,
-            ex_write_reg => exmem_write_reg,
-            ex_read_data2 => exmem_read_data2,
-            ex_alu_result => exmem_alu_result,
+            ex_out_enable => ex_mem_out_enable,
+            ex_is_swap => ex_mem_is_swap,
+            ex_swap_phase => ex_mem_swap_phase,
+            ex_reg_write => ex_mem_reg_write,
+            ex_is_call => ex_mem_is_call,
+            ex_is_ret => ex_mem_is_ret,
+            ex_is_push => ex_mem_is_push,
+            ex_is_pop => ex_mem_is_pop,
+            ex_hlt => ex_mem_hlt,
+            ex_is_in => ex_mem_is_in,
+            ex_is_int => ex_mem_is_int,
+            ex_is_rti => ex_mem_is_rti,
+            ex_read_reg1 => ex_mem_read_reg1,
+            ex_write_reg => ex_mem_write_reg,
+            ex_read_data2 => ex_mem_read_data2,
+            ex_alu_result => ex_mem_alu_result,
             ex_input_port_data => execute_input_port_data,
             ex_pc_plus_1 => idex_pc_plus_1,  -- Pass through PC+1
+            -- OUTPUTS: Connect to exmem_* signals (for Memory Stage)
             mem_rti_phase => exmem_rti_phase,
             mem_int_phase => exmem_int_phase,
             mem_mem_write => exmem_mem_write,

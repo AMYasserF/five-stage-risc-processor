@@ -9,6 +9,8 @@ entity EX_MEM_Register is
     Port (
         clk : in STD_LOGIC;
         rst : in STD_LOGIC;
+        enable : in STD_LOGIC;  -- Enable signal
+        flush : in STD_LOGIC;   -- Flush signal
         
         -- Control signals from Execute stage
         ex_rti_phase       : in  STD_LOGIC;
@@ -97,13 +99,41 @@ begin
             -- Reset data
             mem_read_reg1       <= (others => '0');
             mem_write_reg       <= (others => '0');
+
             mem_read_data2      <= (others => '0');
             mem_alu_result      <= (others => '0');
             mem_input_port_data <= (others => '0');
             mem_pc_plus_1       <= (others => '0');
             
         elsif rising_edge(clk) then
-            -- Register control signals
+            if flush = '1' then
+                -- Flush: Clear all control signals (insert bubble/NOP)
+                mem_rti_phase  <= '0';
+                mem_int_phase  <= '0';
+                mem_mem_write  <= '0';
+                mem_mem_read   <= '0';
+                mem_mem_to_reg <= '0';
+                mem_alu_op     <= (others => '0');
+                mem_out_enable <= '0';
+                mem_is_swap    <= '0';
+                mem_swap_phase <= '0';
+                mem_reg_write  <= '0';
+                mem_is_call    <= '0';
+                mem_is_ret     <= '0';
+                mem_is_push    <= '0';
+                mem_is_pop     <= '0';
+                mem_hlt        <= '0';
+                mem_is_in      <= '0';
+                mem_is_int     <= '0';
+                mem_is_rti     <= '0';
+                mem_read_reg1       <= (others => '0');
+                mem_write_reg       <= (others => '0');
+                mem_read_data2      <= (others => '0');
+                mem_alu_result      <= (others => '0');
+                mem_input_port_data <= (others => '0');
+                mem_pc_plus_1       <= (others => '0');
+            elsif enable = '1' then
+                -- Register control signals only if enabled
             mem_rti_phase  <= ex_rti_phase;
             mem_int_phase  <= ex_int_phase;
             mem_mem_write  <= ex_mem_write;
@@ -130,6 +160,8 @@ begin
             mem_alu_result      <= ex_alu_result;
             mem_input_port_data <= ex_input_port_data;
             mem_pc_plus_1       <= ex_pc_plus_1;
+            end if;
+            -- When enable = '0', all registers freeze (maintain current values)
         end if;
     end process;
     

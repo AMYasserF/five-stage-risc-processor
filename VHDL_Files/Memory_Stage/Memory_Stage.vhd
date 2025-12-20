@@ -151,6 +151,7 @@ architecture Structural of Memory_Stage is
             pc_data : in STD_LOGIC_VECTOR(31 downto 0);
             rsrc2_data : in STD_LOGIC_VECTOR(31 downto 0);
             ccr_data : in STD_LOGIC_VECTOR(31 downto 0);
+            alu_result : in STD_LOGIC_VECTOR(31 downto 0);
             sel : in STD_LOGIC_VECTOR(1 downto 0);
             mem_write_data : out STD_LOGIC_VECTOR(31 downto 0)
         );
@@ -359,6 +360,7 @@ begin
             pc_data => pc_data,
             rsrc2_data => rsrc2_data,
             ccr_data => ccr_data,
+            alu_result => alu_result,
             sel => mem_write_data_sel,
             mem_write_data => mem_write_data
         );

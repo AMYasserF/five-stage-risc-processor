@@ -69,6 +69,9 @@ vcom -2008 IO_Ports/Output_Port_Register.vhd
 puts "\n=== Compiling Forwarding Unit ==="
 vcom -2008 Forwarding_Unit.vhd
 
+puts "\n=== Compiling Hazard Detection Unit ==="
+vcom -2008 Hazard_Detection_Unit/Hazard_Detection_Unit.vhd
+
 puts "\n=== Compiling Top-Level Processor ==="
 vcom -2008 Processor_Top.vhd
 

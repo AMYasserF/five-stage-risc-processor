@@ -30,7 +30,9 @@ entity control_unit is
            branchZ               : out STD_LOGIC;                 -- Output: Branch if Zero flag (Z)
            branchC               : out STD_LOGIC;                 -- Output: Branch if Carry flag (C)
            branchN               : out STD_LOGIC;                 -- Output: Branch if Negative flag (N)
-           unconditional_branch  : out STD_LOGIC                  -- Output: Unconditional Branch (JMP)
+           unconditional_branch  : out STD_LOGIC;                 -- Output: Unconditional Branch (JMP)
+           has_one_operand       : out STD_LOGIC;                 -- Output: Instruction has one operand
+           has_two_operands      : out STD_LOGIC                  -- Output: Instruction has two operands
            );
 end control_unit;
 
@@ -63,6 +65,8 @@ begin
         branchN               <= '0';
         unconditional_branch  <= '0';
         is_in                 <= '0';
+        has_one_operand       <= '0';
+        has_two_operands      <= '0';
         -- If previous_is_immediate is '1', set all control signals to '0' and ignore opcode
         if previous_is_immediate = '1' then
             -- All control signals are set to '0' by default (already done)
@@ -88,13 +92,16 @@ begin
                         when "0010" =>  -- NOT
                             alu_op <= "0100";  -- NotA
                             reg_write <= '1';
+                            has_one_operand <= '1';
                         when "0011" =>  -- INC
                             alu_op <= "0101";  -- IncA
                             reg_write <= '1';
+                            has_one_operand <= '1';
                         when "0100" =>  -- OUT
                             alu_op <= "0010";  -- PassA
                             out_enable <= '1';
                             reg_write <= '0';
+                            has_one_operand <= '1';
                         when "0101" =>  -- IN
                             is_in <= '1';
                             alu_op <= "0011";  -- PassB (from input port)
@@ -102,6 +109,7 @@ begin
                         when "0110" =>  -- MOV
                             alu_op <= "0010";  -- PassA
                             reg_write <= '1';
+                            has_one_operand <= '1';
                         when "0111" =>  -- SWAP
                             alu_op <= "0111";  -- SWAP
                             is_swap <= '1';
@@ -109,12 +117,15 @@ begin
                         when "1000" =>  -- ADD
                             alu_op <= "1000";  -- ADD
                             reg_write <= '1';
+                            has_two_operands <= '1';
                         when "1001" =>  -- SUB
                             alu_op <= "1001";  -- SUB
                             reg_write <= '1';
+                            has_two_operands <= '1';
                         when "1010" =>  -- AND
                             alu_op <= "0110";  -- AND
                             reg_write <= '1';
+                            has_two_operands <= '1';
                         when others =>
                             alu_op <= "0000";  -- Default NOP
                     end case;
@@ -125,19 +136,23 @@ begin
                             alu_op <= "1000";  -- ADD
                             reg_write <= '1';
                             mem_to_reg <= '0';
+                            has_one_operand <= '1';
                         when "0010" =>  -- LDM
                             alu_op <= "0011";  -- PassB (immediate)
                             reg_write <= '1';
                             mem_to_reg <= '0';
+                            has_one_operand <= '1';
                         when "0011" =>  -- LDD
                             alu_op <= "1000";  -- ADD (Rs1 + offset)
                             reg_write <= '1';
                             mem_read <= '1';
                             mem_to_reg <= '1';
+                            has_one_operand <= '1';
                         when "0100" =>  -- STD
                             alu_op <= "1000";  -- ADD (Rs2 + offset)
                             mem_write <= '1';
                             reg_write <= '0';
+                            has_two_operands <= '1';
                         when others =>
                             alu_op <= "0000";  -- Default NOP
                     end case;
@@ -174,13 +189,15 @@ begin
                         when "0001" =>  -- PUSH (hasImm=0)
                             is_push <= '1';
                             mem_write <= '1';
-                            alu_op <= "0000";
+                            alu_op <= "0010";  -- PassA - passes read_data1 through ALU
+                            has_one_operand <= '1';
                         when "0010" =>  -- POP (hasImm=0)
                             is_pop <= '1';
                             mem_read <= '1';
                             mem_to_reg <= '1';
                             reg_write <= '1';
                             alu_op <= "0000";
+                            has_one_operand <= '1';
                         when "0011" =>  -- INT (hasImm=1)
                             is_int <= '1';
                             int_phase <= '0';
