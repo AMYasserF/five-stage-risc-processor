@@ -86,7 +86,7 @@ architecture Behavioral of Processor_Top_TB is
     -- Clock period
     constant clk_period : time := 10 ns;
     
-    -- Instruction memory (LDD/STD test)
+    -- Instruction memory (SWAP test)
     type mem_array is array (0 to 127) of STD_LOGIC_VECTOR(31 downto 0);
     signal instruction_memory : mem_array := (
         -- Address 0: pointer to program start (address 2)

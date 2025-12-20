@@ -482,4 +482,5 @@
 # ** Warning: NUMERIC_STD.TO_INTEGER: metavalue detected, returning 0
 #    Time: 0 ps  Iteration: 0  Instance: /processor_top_tb/UUT/Decode/reg_file
 # 0 ps
-# 420 ns
+# 420 ns       # End time: 13:50:53 on Dec 20,2025, Elapsed time: 1:53:59
+# Errors: 0, Warnings: 6
