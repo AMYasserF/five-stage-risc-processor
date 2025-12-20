@@ -280,9 +280,53 @@ if {[catch {add wave -label "Mem to Reg" /Processor_Top_TB/UUT/memwb_mem_to_reg}
 # ========================================
 add wave -divider -height 25 "========== WRITEBACK STAGE =========="
 puts "Adding Writeback signals..."
-if {[catch {add wave -label "Write Data (Mux Output)" -radix hex /Processor_Top_TB/UUT/wb_write_data}]} {puts "  Warning: Write Data not found"}
-if {[catch {add wave -label "Write Register Address" -radix unsigned /Processor_Top_TB/UUT/wb_write_reg}]} {puts "  Warning: Write Register Address not found"}
-if {[catch {add wave -label "Write Enable" /Processor_Top_TB/UUT/wb_write_enable}]} {puts "  Warning: Write Enable not found"}
+add wave -label "Write Data (Mux Output)" -radix hex /Processor_Top_TB/UUT/wb_write_data
+add wave -label "Write Register Address" -radix unsigned /Processor_Top_TB/UUT/wb_write_reg
+add wave -label "Write Enable" /Processor_Top_TB/UUT/wb_write_enable
+
+# ========================================
+# SWAP OPERATION SIGNALS
+# ========================================
+add wave -divider -height 30 "========== SWAP OPERATION =========="
+puts "Adding SWAP signals..."
+#add wave -divider -height 20 "--- ID/EX Register ---"
+add wave -label ">>> Is SWAP (ID/EX IN) <<<" /Processor_Top_TB/UUT/IDEX_Reg/is_swap_in
+add wave -label ">>> Is SWAP (ID/EX OUT) <<<" /Processor_Top_TB/UUT/IDEX_Reg/is_swap_out
+add wave -label ">>> Swap Phase (ID/EX IN) <<<" /Processor_Top_TB/UUT/IDEX_Reg/swap_phase_in
+add wave -label ">>> Swap Phase (ID/EX OUT) <<<" /Processor_Top_TB/UUT/IDEX_Reg/swap_phase_out
+
+#add wave -divider -height 20 "--- Execute Stage ---"
+add wave -label ">>> Is SWAP (Execute) <<<" /Processor_Top_TB/UUT/Execute/id_ex_is_swap
+add wave -label ">>> Swap Phase (Execute) <<<" /Processor_Top_TB/UUT/Execute/id_ex_swap_phase
+
+#add wave -divider -height 20 "--- EX/MEM Register ---"
+add wave -label ">>> Is SWAP (EX/MEM) <<<" /Processor_Top_TB/UUT/exmem_is_swap
+add wave -label ">>> Swap Phase (EX/MEM) <<<" /Processor_Top_TB/UUT/exmem_swap_phase
+
+#add wave -divider -height 20 "--- Memory Stage ---"
+add wave -label ">>> Is SWAP (Memory) <<<" /Processor_Top_TB/UUT/Memory/is_swap
+add wave -label ">>> Swap Phase Previous (Memory IN) <<<" /Processor_Top_TB/UUT/Memory/swap_phase_previous
+add wave -label ">>> Swap Phase Next (Memory IN) <<<" /Processor_Top_TB/UUT/Memory/swap_phase_next
+add wave -label ">>> Swap Phase OUT (Memory) <<<" /Processor_Top_TB/UUT/Memory/swap_phase_out
+add wave -label ">>> Read Data 2 (Memory rsrc2_data) <<<" -radix hex /Processor_Top_TB/UUT/Memory/rsrc2_data
+
+#add wave -divider -height 20 "--- MEM/WB Register ---"
+add wave -label ">>> Is SWAP (MEM/WB) <<<" /Processor_Top_TB/UUT/memwb_is_swap
+add wave -label ">>> Swap Phase (MEM/WB) <<<" /Processor_Top_TB/UUT/memwb_swap_phase
+add wave -label ">>> Rdst (MEM/WB) <<<" -radix unsigned /Processor_Top_TB/UUT/memwb_rdst
+add wave -label ">>> Rsrc1 (MEM/WB) <<<" -radix unsigned /Processor_Top_TB/UUT/memwb_rsrc1
+
+#add wave -divider -height 20 "--- Writeback Stage SWAP Mux ---"
+add wave -label ">>> Is SWAP (WB) <<<" /Processor_Top_TB/UUT/Writeback/Is_Swap
+add wave -label ">>> Swap Phase (WB) <<<" /Processor_Top_TB/UUT/Writeback/Swap_Phase
+add wave -label ">>> Swap Phase Next (WB Output) <<<" /Processor_Top_TB/UUT/Writeback/Swap_Phase_Next
+add wave -label ">>> Rdst (WB Input) <<<" -radix unsigned /Processor_Top_TB/UUT/Writeback/Rdst
+add wave -label ">>> Rsrc1 (WB Input) <<<" -radix unsigned /Processor_Top_TB/UUT/Writeback/Rsrc1
+add wave -label ">>> R_data2 (WB Input) <<<" -radix hex /Processor_Top_TB/UUT/Writeback/R_data2
+add wave -label ">>> ALU Result (WB Input) <<<" -radix hex /Processor_Top_TB/UUT/Writeback/ALU_Result
+add wave -label ">>> TwoRegsDataMux (SWAP Mux) <<<" -radix hex /Processor_Top_TB/UUT/Writeback/TwoRegsDataMux
+add wave -label ">>> Write Back Register (Selected) <<<" -radix unsigned /Processor_Top_TB/UUT/Writeback/Write_Back_Register
+add wave -label ">>> Write Back Data (Final) <<<" -radix hex /Processor_Top_TB/UUT/Writeback/Write_Back_Data
 
 # ========================================
 # INPUT/OUTPUT PORTS
