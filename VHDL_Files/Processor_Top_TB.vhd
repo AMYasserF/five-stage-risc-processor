@@ -94,90 +94,80 @@ architecture Behavioral of Processor_Top_TB is
         1 => X"00000000",
 
         -- Program starts at address 2
-        -- Test LDD and STD operations
+        -- Test SWAP operation
         
-        -- LDM R1, #0xAAAA (load test value)
+        -- LDM R1, #0x1111 (load first test value)
         2 => X"A4400000",  -- LDM R1
-        3 => X"0000AAAA",
+        3 => X"00001111",
         
         -- 3 NOPs for pipeline settling
         4 => X"00000000",
         5 => X"00000000",
         6 => X"00000000",
 
-        -- LDM R2, #0xBBBB (load second test value)
+        -- LDM R2, #0x2222 (load second test value)
         7 => X"A4800000",  -- LDM R2
-        8 => X"0000BBBB",
+        8 => X"00002222",
         
         -- 3 NOPs
         9 => X"00000000",
         10 => X"00000000",
         11 => X"00000000",
 
-        -- LDM R3, #50 (load base address for memory operations)
-        12 => X"A4C00000",  -- LDM R3
-        13 => X"00000032",  -- Address 50
+        -- SWAP R1, R2 (swap values of R1 and R2)
+        -- Opcode: 0111 (R-type SWAP)
+        -- Format: [31:25]=0001110, [24:22]=R2(010), [21:19]=R1(001), [18:16]=unused
+        12 => X"0E8A0000",  -- SWAP R1, R2
         
-        -- 3 NOPs
+        -- 5 NOPs to observe result
+        -- After SWAP: R1 should have 0x2222, R2 should have 0x1111
+        13 => X"00000000",
         14 => X"00000000",
         15 => X"00000000",
         16 => X"00000000",
+        17 => X"00000000",
 
-        -- STD R1, R3, #0 (store R1 to memory[R3+0] = memory[50])
-        17 => X"A8190000",  --  
-        18 => X"00000000",  -- offset = 0
+        -- LDM R3, #0x3333 (load third test value)
+        18 => X"A4C00000",  -- LDM R3
+        19 => X"00003333",
         
         -- 3 NOPs
-        19 => X"00000000",
         20 => X"00000000",
         21 => X"00000000",
+        22 => X"00000000",
 
-        -- STD R2, R3, #2 (store R2 to memory[R3+2] = memory[52])
-        22 => X"A81A0000",  -- STD R2, R3, offset
-        23 => X"00000002",  -- offset = 2
+        -- LDM R4, #0x4444 (load fourth test value)
+        23 => X"A5000000",  -- LDM R4
+        24 => X"00004444",
         
         -- 3 NOPs
-        24 => X"00000000",
         25 => X"00000000",
         26 => X"00000000",
+        27 => X"00000000",
 
-        -- LDM R1, #0x0000 (clear R1)
-        27 => X"A4400000",  -- LDM R1
-        28 => X"00000000",
+        -- SWAP R3, R4 (swap values of R3 and R4)
+        -- Format: [31:25]=0001110, [24:22]=R4(100), [21:19]=R3(011), [18:16]=unused
+        28 => X"0E9C0000",  -- SWAP R3, R4
         
-        -- 3 NOPs
+        -- 5 NOPs to observe result
+        -- After SWAP: R3 should have 0x4444, R4 should have 0x3333
         29 => X"00000000",
         30 => X"00000000",
         31 => X"00000000",
-
-        -- LDM R2, #0x0000 (clear R2)
-        32 => X"A4800000",  -- LDM R2
+        32 => X"00000000",
         33 => X"00000000",
+
+        -- SWAP R1, R3 (swap R1 and R3)
+        -- Format: [31:25]=0001110, [24:22]=R3(011), [21:19]=R1(001), [18:16]=unused
+        34 => X"0E6C0000",  -- SWAP R1, R3
         
-        -- 3 NOPs
-        34 => X"00000000",
+        -- 5 NOPs to observe final result
+        -- After SWAP: R1 should have 0x4444, R3 should have 0x2222
         35 => X"00000000",
         36 => X"00000000",
-
-        -- LDD R4, R3, #0 (load from memory[R3+0] to R4, should get 0xAAAA)
-        37 => X"A7180000",  -- LDD R4, R3, offset
-        38 => X"00000000",  -- offset = 0
-        
-        -- 3 NOPs
+        37 => X"00000000",
+        38 => X"00000000",
         39 => X"00000000",
-        40 => X"00000000",
-        41 => X"00000000",
-
-        -- LDD R5, R3, #2 (load from memory[R3+2] to R5, should get 0xBBBB)
-        42 => X"A7580000",  -- LDD R5, R3, offset
-        43 => X"00000002",  -- offset = 2
-        
-        -- 5 NOPs to observe final values
-        44 => X"00000000",
-        45 => X"00000000",
-        46 => X"00000000",
-        47 => X"00000000",
-        48 => X"00000000",
 
         others => X"00000000"
     );
@@ -243,8 +233,8 @@ begin
         -- Release reset
         rst <= '0';
         
-        -- Run for 300 cycles to allow LDD/STD test to complete
-        wait for clk_period * 300;
+        -- Run for 250 cycles to allow SWAP test to complete
+        wait for clk_period * 250;
         
         -- Stop simulation
         wait;
