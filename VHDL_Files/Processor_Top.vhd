@@ -313,7 +313,7 @@ architecture Structural of Processor_Top is
 	    mem_is_ret : in std_logic; --Return
 	    mem_is_rti : in std_logic; --Return interrupt
 	    wb_is_swap : in std_logic; --Swap
-	    wb_swap_phase : in std_logic; --Swap
+	    wb_swap_counter : in std_logic; --Swap counter (0=first cycle, 1=second cycle)
 	    mem_int_phase : in std_logic_vector(1 downto 0); --Interrupt
 	    mem_rti_phase : in std_logic; --Return interrupt
 	    if_flush : out std_logic; --Fetch_Memory use / Conditional jump / Return / Interrupt / Return interrupt
@@ -322,6 +322,7 @@ architecture Structural of Processor_Top is
 	    if_id_enable : out std_logic; --Swap
 	    id_ex_enable : out std_logic; --Swap
 	    ex_mem_enable : out std_logic; --Pop load use / Swap
+	    mem_wb_enable : out std_logic; --Swap
 	    pc_enable : out std_logic --Fetch_Memory use
     );
     end component;
@@ -443,6 +444,7 @@ architecture Structural of Processor_Top is
         Port (
             rst : in STD_LOGIC;
             clk : in STD_LOGIC;
+            enable : in STD_LOGIC;
             mem_to_reg : in STD_LOGIC;
             out_enable : in STD_LOGIC;
             is_swap : in STD_LOGIC;
@@ -472,6 +474,8 @@ architecture Structural of Processor_Top is
     
     component Write_Back is
         Port (
+            clk : in STD_LOGIC;
+            rst : in STD_LOGIC;
             MemToReg : in STD_LOGIC;
             Is_Input : in STD_LOGIC;
             Is_Output : in STD_LOGIC;
@@ -486,7 +490,8 @@ architecture Structural of Processor_Top is
             Output_Port_Data : out STD_LOGIC_VECTOR(31 downto 0);
             Write_Back_Data : out STD_LOGIC_VECTOR(31 downto 0);
             Write_Back_Register : out STD_LOGIC_VECTOR(2 downto 0);
-            Swap_Phase_Next : out STD_LOGIC
+            Swap_Phase_Next : out STD_LOGIC;
+            Swap_Counter : out STD_LOGIC
         );
     end component;
     
@@ -662,6 +667,7 @@ architecture Structural of Processor_Top is
     signal wb_write_back_data : STD_LOGIC_VECTOR(31 downto 0);
     signal wb_write_back_register : STD_LOGIC_VECTOR(2 downto 0);
     signal wb_swap_phase_next : STD_LOGIC;
+    signal wb_swap_counter : STD_LOGIC;  -- Counter for SWAP phases
     
     -- Additional signals needed
     signal ccr_register : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');  -- CCR register placeholder
@@ -687,6 +693,7 @@ architecture Structural of Processor_Top is
     signal hdu_idex_flush : STD_LOGIC := '0';
     signal hdu_exmem_enable : STD_LOGIC := '1';
     signal hdu_exmem_flush : STD_LOGIC := '0';
+    signal hdu_memwb_enable : STD_LOGIC := '1';
     
     signal unused : STD_LOGIC := '0';
     signal unused_2bits : STD_LOGIC_VECTOR(1 downto 0) := "00";
@@ -794,7 +801,7 @@ begin
 	        mem_is_ret => exmem_is_ret,
 	        mem_is_rti => exmem_is_rti,
 	        wb_is_swap => memwb_is_swap,
-	        wb_swap_phase => memwb_swap_phase,
+	        wb_swap_counter => wb_swap_counter,
 	        mem_int_phase => unused_2bits,
 	        mem_rti_phase => exmem_rti_phase,
 	        if_flush => hdu_ifid_flush,
@@ -803,6 +810,7 @@ begin
 	        if_id_enable => hdu_ifid_enable,
 	        id_ex_enable => hdu_idex_enable,
 	        ex_mem_enable => hdu_exmem_enable,
+            mem_wb_enable => hdu_memwb_enable,
 	        pc_enable => hdu_pc_enable
        );
     
@@ -1146,6 +1154,7 @@ begin
         port map (
             rst => rst,
             clk => clk,
+            enable => hdu_memwb_enable,
             mem_to_reg => mem_mem_to_reg,
             out_enable => mem_out_enable,
             is_swap => mem_is_swap,
@@ -1175,6 +1184,8 @@ begin
     -- ==================== Writeback Stage ====================
     Writeback: Write_Back
         port map (
+            clk => clk,
+            rst => rst,
             MemToReg => memwb_mem_to_reg,
             Is_Input => memwb_is_input,
             Is_Output => memwb_out_enable,
@@ -1189,7 +1200,8 @@ begin
             Output_Port_Data => wb_output_port_data,
             Write_Back_Data => wb_write_back_data,
             Write_Back_Register => wb_write_back_register,
-            Swap_Phase_Next => wb_swap_phase_next
+            Swap_Phase_Next => wb_swap_phase_next,
+            Swap_Counter => wb_swap_counter
         );
     
     -- ==================== Input Port Register ====================

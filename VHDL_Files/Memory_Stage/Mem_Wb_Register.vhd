@@ -5,6 +5,7 @@ use IEEE.NUMERIC_STD.ALL;
 entity Mem_Wb_Register is
   port(
     rst, clk : in std_logic;
+	 enable : in std_logic;
 	 mem_to_reg : in std_logic;
 	 out_enable : in std_logic;
 	 is_swap : in std_logic;
@@ -50,7 +51,7 @@ begin
 		alu_result_out <= (others => '0');
 		mem_data_out <= (others => '0');
 		input_port_data_out <= (others => '0');
-	 elsif(rising_edge(clk))
+	 elsif(rising_edge(clk) and enable = '1')
 	 then
 	   mem_to_reg_out <= mem_to_reg;
 		out_enable_out <= out_enable;

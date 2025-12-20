@@ -4,6 +4,8 @@ USE IEEE.numeric_std.all;
 
 entity Write_Back is
   port(
+	 clk : in std_logic;
+	 rst : in std_logic;
 	 MemToReg : in std_logic;
 	 Is_Input : in std_logic;
 	 Is_Output : in std_logic;
@@ -18,42 +20,68 @@ entity Write_Back is
 	 Output_Port_Data : out std_logic_vector(31 downto 0);
 	 Write_Back_Data : out std_logic_vector(31 downto 0);
 	 Write_Back_Register : out std_logic_vector(2 downto 0);
-	 Swap_Phase_Next : out std_logic
+	 Swap_Phase_Next : out std_logic;
+	 Swap_Counter : out std_logic  -- Output counter for HDU
    );
 end entity;
 
 architecture a_Write_Back of Write_Back is
   signal TwoRegsDataMux : std_logic_vector(31 downto 0);
   signal WriteBackMuxSelect : std_logic_vector(1 downto 0);
+  signal swap_counter_internal : std_logic := '0';  -- Internal counter for SWAP phase
+  signal swap_cycle_count : integer := 0;  -- Track number of SWAP cycles completed
 begin
-  Swap_Phase_Next <= Is_Swap and not Swap_Phase;
+  -- Use internal counter for swap_phase_next
+  Swap_Phase_Next <= swap_counter_internal;
+  
+  -- Output counter to HDU
+  Swap_Counter <= swap_counter_internal;
+  
+  -- Counter process: 0->1 after first cycle, then stops
+  process(clk, rst)
+  begin
+    if rst = '1' then
+      swap_counter_internal <= '0';
+      swap_cycle_count <= 0;
+    elsif rising_edge(clk) then
+      if Is_Swap = '1' then
+        -- Increment cycle counter
+        swap_cycle_count <= swap_cycle_count + 1;
+        
+        -- Toggle counter after first cycle (0->1), then stay at 1
+        if swap_cycle_count = 0 then
+          swap_counter_internal <= '1';
+        end if;
+      else
+        -- Reset when SWAP completes
+        swap_counter_internal <= '0';
+        swap_cycle_count <= 0;
+      end if;
+    end if;
+  end process;
   WriteBackMuxSelect <= Is_Input & MemToReg;
   
   -- For OUT instruction, output the ALU result (which contains the register value passed through)
   Output_Port_Data <= ALU_Result when Is_Output='1'
   else (others => '0');
   
-  -- Write Back Register selection
-  process(Swap_Phase, Rdst, Rsrc1)
+  -- Write Back Register selection using internal counter
+  process(swap_counter_internal, Rdst, Rsrc1)
   begin
-    if Swap_Phase = '0' then
+    if swap_counter_internal = '0' then
       Write_Back_Register <= Rdst;
-    elsif Swap_Phase = '1' then
+    else  -- swap_counter_internal = '1'
       Write_Back_Register <= Rsrc1;
-    else
-      Write_Back_Register <= (others => '0');
     end if;
   end process;
   
-  -- Two Register Data Mux (for SWAP)
-  process(Swap_Phase, ALU_Result, R_data2)
+  -- Two Register Data Mux (for SWAP) using internal counter
+  process(swap_counter_internal, ALU_Result, R_data2)
   begin
-    if Swap_Phase = '0' then
+    if swap_counter_internal = '0' then
       TwoRegsDataMux <= ALU_Result;
-    elsif Swap_Phase = '1' then
+    else  -- swap_counter_internal = '1'
       TwoRegsDataMux <= R_data2;
-    else
-      TwoRegsDataMux <= (others => '0');
     end if;
   end process;
   
