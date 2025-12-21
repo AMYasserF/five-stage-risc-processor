@@ -72,6 +72,10 @@ vcom -2008 Forwarding_Unit.vhd
 puts "\n=== Compiling Hazard Detection Unit ==="
 vcom -2008 Hazard_Detection_Unit/Hazard_Detection_Unit.vhd
 
+puts "\n=== Compiling Dynamic Branch Prediction ==="
+vcom -2008 Two_Bits_Dynamic_Branch_Prediction/Two_Bits_Dynamic_Branch_Prediction.vhd
+vcom -2008 Two_Bits_Dynamic_Branch_Prediction/Not_Taken_After_Taken_Mux.vhd
+
 puts "\n=== Compiling Top-Level Processor ==="
 vcom -2008 Processor_Top.vhd
 
@@ -146,7 +150,6 @@ if {[catch {add wave -label "Read Data 2" -radix hex /Processor_Top_TB/UUT/read_
 # ========================================
 add wave -divider -height 25 "========== CONTROL UNIT =========="
 puts "Adding Control Unit signals..."
-if {[catch {add wave -label ">>> ALU Address Enable (Decode Output) <<<" -color Cyan /Processor_Top_TB/UUT/Decode/ctrl_unit/alu_address_enable}]} {puts "  Warning: ALU Address Enable from CU not found"}
 if {[catch {add wave -label ">>> Is PUSH <<<" /Processor_Top_TB/UUT/Decode/ctrl_unit/is_push}]} {puts "  Warning: Is PUSH not found"}
 if {[catch {add wave -label ">>> Is POP <<<" /Processor_Top_TB/UUT/Decode/ctrl_unit/is_pop}]} {puts "  Warning: Is POP not found"}
 if {[catch {add wave -label ">>> Mem Write <<<" /Processor_Top_TB/UUT/Decode/ctrl_unit/mem_write}]} {puts "  Warning: Mem Write not found"}
@@ -181,9 +184,6 @@ if {[catch {
 # ========================================
 add wave -divider -height 25 "========== ID/EX REGISTER =========="
 puts "Adding ID/EX signals..."
-if {[catch {add wave -label ">>> ALU Address Enable IN <<<" -color Cyan /Processor_Top_TB/UUT/IDEX_Reg/alu_address_enable_in}]} {puts "  Warning: alu_address_enable_in not found"}
-if {[catch {add wave -label ">>> ALU Address Enable OUT <<<" -color Cyan /Processor_Top_TB/UUT/IDEX_Reg/alu_address_enable_out}]} {puts "  Warning: alu_address_enable_out not found"}
-if {[catch {add wave -label ">>> ALU Address Enable REG <<<" -color Cyan /Processor_Top_TB/UUT/IDEX_Reg/alu_address_enable_reg}]} {puts "  Warning: alu_address_enable_reg not found"}
 if {[catch {add wave -label "Read Data 1" -radix hex /Processor_Top_TB/UUT/idex_read_data1}]} {puts "  Warning: Read Data 1 not found"}
 if {[catch {add wave -label "Read Data 2" -radix hex /Processor_Top_TB/UUT/idex_read_data2}]} {puts "  Warning: Read Data 2 not found"}
 if {[catch {add wave -label "Is Immediate" /Processor_Top_TB/UUT/idex_is_immediate}]} {puts "  Warning: Is Immediate not found"}
@@ -193,8 +193,6 @@ if {[catch {add wave -label "Is Immediate" /Processor_Top_TB/UUT/idex_is_immedia
 # ========================================
 add wave -divider -height 25 "========== EXECUTE STAGE (ALU) =========="
 puts "Adding Execute signals..."
-if {[catch {add wave -label ">>> ALU Address Enable IN (from ID/EX) <<<" -color Cyan /Processor_Top_TB/UUT/Execute/id_ex_alu_address_enable}]} {puts "  Warning: id_ex_alu_address_enable not found"}
-if {[catch {add wave -label ">>> ALU Address Enable OUT (to EX/MEM) <<<" -color Cyan /Processor_Top_TB/UUT/Execute/ex_mem_alu_address_enable}]} {puts "  Warning: ex_mem_alu_address_enable not found"}
 if {[catch {add wave -label "ALU Operand A (Input)" -radix hex /Processor_Top_TB/UUT/Execute/alu_operand_a}]} {puts "  Warning: ALU Operand A not found"}
 if {[catch {add wave -label "ALU Operand B (Input)" -radix hex /Processor_Top_TB/UUT/Execute/alu_operand_b}]} {puts "  Warning: ALU Operand B not found"}
 if {[catch {add wave -label "ALU Operation" -radix hex /Processor_Top_TB/UUT/Execute/id_ex_alu_op}]} {puts "  Warning: ALU Operation not found"}
@@ -231,8 +229,6 @@ if {[catch {add wave -label "CCR N Flag Output" /Processor_Top_TB/UUT/Execute/cc
 # ========================================
 add wave -divider -height 25 "========== EX/MEM REGISTER =========="
 puts "Adding EX/MEM signals..."
-if {[catch {add wave -label ">>> ALU Address Enable IN <<<" -color Cyan /Processor_Top_TB/UUT/EXMEM_Reg/ex_alu_address_enable}]} {puts "  Warning: ex_alu_address_enable not found"}
-if {[catch {add wave -label ">>> ALU Address Enable OUT <<<" -color Cyan /Processor_Top_TB/UUT/EXMEM_Reg/mem_alu_address_enable}]} {puts "  Warning: mem_alu_address_enable not found"}
 if {[catch {add wave -label "ALU Result" -radix hex /Processor_Top_TB/UUT/exmem_alu_result}]} {puts "  Warning: ALU Result not found"}
 if {[catch {add wave -label "Write Reg" -radix unsigned /Processor_Top_TB/UUT/exmem_write_reg}]} {puts "  Warning: Write Reg not found"}
 if {[catch {add wave -label "Reg Write Enable" /Processor_Top_TB/UUT/exmem_reg_write}]} {puts "  Warning: Reg Write Enable not found"}
@@ -244,15 +240,8 @@ if {[catch {add wave -label "Mem Read" /Processor_Top_TB/UUT/exmem_mem_read}]} {
 # ========================================
 add wave -divider -height 25 "========== MEMORY STAGE =========="
 puts "Adding Memory signals..."
-if {[catch {add wave -label ">>> ALU Address Enable (to Control Unit) <<<" -color Cyan /Processor_Top_TB/UUT/Memory/alu_address_enable}]} {puts "  Warning: alu_address_enable not found"}
-if {[catch {add wave -label ">>> Memory Address Control: ALU Enable Input <<<" -color Cyan /Processor_Top_TB/UUT/Memory/Mem_Addr_CU/alu_address_enable}]} {puts "  Warning: Mem_Addr_CU alu_address_enable not found"}
 if {[catch {add wave -label "ALU Result (Input)" -radix hex /Processor_Top_TB/UUT/Memory/alu_result}]} {puts "  Warning: ALU Result not found"}
-if {[catch {add wave -label ">>> ALU Address Enable (LDD/STD) <<<" -color Magenta /Processor_Top_TB/UUT/Memory/alu_address_enable}]} {puts "  Warning: ALU Address Enable not found"}
 if {[catch {add wave -label "Memory Address" -radix hex /Processor_Top_TB/UUT/Memory/mem_address}]} {puts "  Warning: Memory Address not found"}
-if {[catch {add wave -label ">>> Memory Address Mux Selector <<<" -radix binary -color Yellow /Processor_Top_TB/UUT/Memory/mem_addr_mux_sel}]} {puts "  Warning: Memory Address Mux Selector not found"}
-if {[catch {add wave -label "Memory Address Mux - ALU Input" -radix hex /Processor_Top_TB/UUT/Memory/Mem_Addr_Mux/alu_address}]} {puts "  Warning: Mux ALU Input not found"}
-if {[catch {add wave -label "Memory Address Mux - SP Input" -radix hex /Processor_Top_TB/UUT/Memory/Mem_Addr_Mux/sp_address}]} {puts "  Warning: Mux SP Input not found"}
-if {[catch {add wave -label "Memory Address Mux - PC Input" -radix hex /Processor_Top_TB/UUT/Memory/Mem_Addr_Mux/pc_address}]} {puts "  Warning: Mux PC Input not found"}
 if {[catch {add wave -label "Memory Write Data" -radix hex /Processor_Top_TB/UUT/Memory/mem_write_data}]} {puts "  Warning: Memory Write Data not found"}
 if {[catch {add wave -label "Memory Data (Output)" -radix hex /Processor_Top_TB/UUT/Memory/mem_data_out}]} {puts "  Warning: Memory Data not found"}
 if {[catch {add wave -label ">>> Memory Read Enable <<<" /Processor_Top_TB/UUT/Memory/actual_mem_read}]} {puts "  Warning: Memory Read not found"}
@@ -280,53 +269,9 @@ if {[catch {add wave -label "Mem to Reg" /Processor_Top_TB/UUT/memwb_mem_to_reg}
 # ========================================
 add wave -divider -height 25 "========== WRITEBACK STAGE =========="
 puts "Adding Writeback signals..."
-add wave -label "Write Data (Mux Output)" -radix hex /Processor_Top_TB/UUT/wb_write_data
-add wave -label "Write Register Address" -radix unsigned /Processor_Top_TB/UUT/wb_write_reg
-add wave -label "Write Enable" /Processor_Top_TB/UUT/wb_write_enable
-
-# ========================================
-# SWAP OPERATION SIGNALS
-# ========================================
-add wave -divider -height 30 "========== SWAP OPERATION =========="
-puts "Adding SWAP signals..."
-#add wave -divider -height 20 "--- ID/EX Register ---"
-add wave -label ">>> Is SWAP (ID/EX IN) <<<" /Processor_Top_TB/UUT/IDEX_Reg/is_swap_in
-add wave -label ">>> Is SWAP (ID/EX OUT) <<<" /Processor_Top_TB/UUT/IDEX_Reg/is_swap_out
-add wave -label ">>> Swap Phase (ID/EX IN) <<<" /Processor_Top_TB/UUT/IDEX_Reg/swap_phase_in
-add wave -label ">>> Swap Phase (ID/EX OUT) <<<" /Processor_Top_TB/UUT/IDEX_Reg/swap_phase_out
-
-#add wave -divider -height 20 "--- Execute Stage ---"
-add wave -label ">>> Is SWAP (Execute) <<<" /Processor_Top_TB/UUT/Execute/id_ex_is_swap
-add wave -label ">>> Swap Phase (Execute) <<<" /Processor_Top_TB/UUT/Execute/id_ex_swap_phase
-
-#add wave -divider -height 20 "--- EX/MEM Register ---"
-add wave -label ">>> Is SWAP (EX/MEM) <<<" /Processor_Top_TB/UUT/exmem_is_swap
-add wave -label ">>> Swap Phase (EX/MEM) <<<" /Processor_Top_TB/UUT/exmem_swap_phase
-
-#add wave -divider -height 20 "--- Memory Stage ---"
-add wave -label ">>> Is SWAP (Memory) <<<" /Processor_Top_TB/UUT/Memory/is_swap
-add wave -label ">>> Swap Phase Previous (Memory IN) <<<" /Processor_Top_TB/UUT/Memory/swap_phase_previous
-add wave -label ">>> Swap Phase Next (Memory IN) <<<" /Processor_Top_TB/UUT/Memory/swap_phase_next
-add wave -label ">>> Swap Phase OUT (Memory) <<<" /Processor_Top_TB/UUT/Memory/swap_phase_out
-add wave -label ">>> Read Data 2 (Memory rsrc2_data) <<<" -radix hex /Processor_Top_TB/UUT/Memory/rsrc2_data
-
-#add wave -divider -height 20 "--- MEM/WB Register ---"
-add wave -label ">>> Is SWAP (MEM/WB) <<<" /Processor_Top_TB/UUT/memwb_is_swap
-add wave -label ">>> Swap Phase (MEM/WB) <<<" /Processor_Top_TB/UUT/memwb_swap_phase
-add wave -label ">>> Rdst (MEM/WB) <<<" -radix unsigned /Processor_Top_TB/UUT/memwb_rdst
-add wave -label ">>> Rsrc1 (MEM/WB) <<<" -radix unsigned /Processor_Top_TB/UUT/memwb_rsrc1
-
-#add wave -divider -height 20 "--- Writeback Stage SWAP Mux ---"
-add wave -label ">>> Is SWAP (WB) <<<" /Processor_Top_TB/UUT/Writeback/Is_Swap
-add wave -label ">>> Swap Phase (WB) <<<" /Processor_Top_TB/UUT/Writeback/Swap_Phase
-add wave -label ">>> Swap Phase Next (WB Output) <<<" /Processor_Top_TB/UUT/Writeback/Swap_Phase_Next
-add wave -label ">>> Rdst (WB Input) <<<" -radix unsigned /Processor_Top_TB/UUT/Writeback/Rdst
-add wave -label ">>> Rsrc1 (WB Input) <<<" -radix unsigned /Processor_Top_TB/UUT/Writeback/Rsrc1
-add wave -label ">>> R_data2 (WB Input) <<<" -radix hex /Processor_Top_TB/UUT/Writeback/R_data2
-add wave -label ">>> ALU Result (WB Input) <<<" -radix hex /Processor_Top_TB/UUT/Writeback/ALU_Result
-add wave -label ">>> TwoRegsDataMux (SWAP Mux) <<<" -radix hex /Processor_Top_TB/UUT/Writeback/TwoRegsDataMux
-add wave -label ">>> Write Back Register (Selected) <<<" -radix unsigned /Processor_Top_TB/UUT/Writeback/Write_Back_Register
-add wave -label ">>> Write Back Data (Final) <<<" -radix hex /Processor_Top_TB/UUT/Writeback/Write_Back_Data
+if {[catch {add wave -label "Write Data (Mux Output)" -radix hex /Processor_Top_TB/UUT/wb_write_data}]} {puts "  Warning: Write Data not found"}
+if {[catch {add wave -label "Write Register Address" -radix unsigned /Processor_Top_TB/UUT/wb_write_reg}]} {puts "  Warning: Write Register Address not found"}
+if {[catch {add wave -label "Write Enable" /Processor_Top_TB/UUT/wb_write_enable}]} {puts "  Warning: Write Enable not found"}
 
 # ========================================
 # INPUT/OUTPUT PORTS
@@ -351,11 +296,11 @@ if {[catch {add wave -label "Is OUT Instruction (MEM/WB)" /Processor_Top_TB/UUT/
 # ========================================
 
 puts "\n======================================"
-puts "Running Simulation for 400ns"
+puts "Running Simulation for 1600ns"
 puts "======================================"
 
 # Run simulation
-run 400ns
+run 1600ns
 
 puts "\n======================================"
 puts "Simulation Complete!"

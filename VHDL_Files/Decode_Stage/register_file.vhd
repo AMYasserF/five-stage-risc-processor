@@ -40,7 +40,7 @@ begin
     -- Read process (synchronous read on falling edge)
     process(clk)
     begin
-        if falling_edge(clk) then
+        if rising_edge(clk) then
             read_data1 <= registers(to_integer(unsigned(read_reg1)));
             read_data2 <= registers(to_integer(unsigned(read_reg2)));
         end if;
@@ -55,7 +55,7 @@ begin
             for i in 0 to 7 loop
                 registers(i) <= (others => '0');
             end loop;
-        elsif rising_edge(clk) then
+        elsif falling_edge(clk) then
             if hlt = '0' and write_enable = '1' then
                 -- Write data to the specified register only if not halted
                 registers(to_integer(unsigned(write_reg))) <= write_data;

@@ -19,6 +19,13 @@ entity PC_Mux_Control is
         is_call : in STD_LOGIC;               -- CALL instruction
         is_conditional_jump : in STD_LOGIC;   -- Conditional jump instruction
         is_unconditional_jump : in STD_LOGIC; -- Unconditional jump instruction
+
+        --Dynamic branch prediction signals
+        is_branch_taken : in STD_LOGIC;
+        id_conditional_jump_inst : in STD_LOGIC;
+        ex_conditional_jump_inst : in STD_LOGIC;
+        ex_branch_evaluated : in STD_LOGIC;
+
         
         -- Reset (system-level signal)
         rst : in STD_LOGIC;
@@ -31,7 +38,7 @@ end PC_Mux_Control;
 architecture Behavioral of PC_Mux_Control is
 begin
     process(int_load_pc, is_ret, is_call, 
-            is_conditional_jump, rti_load_pc, is_unconditional_jump, rst)
+            is_conditional_jump, rti_load_pc, is_unconditional_jump, rst, id_conditional_jump_inst, is_branch_taken, ex_branch_evaluated)
     begin
        
         if rst = '1' then
@@ -42,9 +49,13 @@ begin
             pc_mux_sel <= "10";  -- PC ? M[SP] from memory
         elsif is_call = '1' then
             pc_mux_sel <= "11";  -- 11: ALU result (CALL from EX/MEM)
+        elsif ex_branch_evaluated = '1' and is_branch_taken = '1' and ex_conditional_jump_inst = '1' then
+            pc_mux_sel <= "00"; -- pc + 1
+        elsif ex_branch_evaluated = '0' and is_branch_taken = '1' and ex_conditional_jump_inst = '1' then
+            pc_mux_sel <= "11";  -- 11: This should be ex.PC+1 
         elsif is_conditional_jump = '1' then
             pc_mux_sel <= "01"; -- if/id.immediate
-        elsif is_unconditional_jump = '1' then
+        elsif is_unconditional_jump = '1' or (id_conditional_jump_inst = '1' and is_branch_taken = '1') then
             pc_mux_sel <= "10"; -- memory output
         else
             pc_mux_sel <= "00"; -- pc + 1 (normal operation)

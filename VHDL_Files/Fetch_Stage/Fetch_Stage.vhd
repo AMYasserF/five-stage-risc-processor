@@ -21,6 +21,11 @@ entity Fetch_Stage is
         is_conditional_jump : in STD_LOGIC;                  -- Conditional jump instruction
         is_unconditional_jump : in STD_LOGIC;               -- Unconditional jump instruction
 
+        --Dynamic Branch Prediction Signals
+        is_branch_taken : in STD_LOGIC;
+        id_conditional_jump_inst : in STD_LOGIC;
+        ex_conditional_jump_inst : in STD_LOGIC;
+        ex_branch_evaluated : in STD_LOGIC;
 
         -- Immediate values from decode stage
         immediate_decode : in STD_LOGIC_VECTOR(31 downto 0); -- Immediate from decode (conditional jump)
@@ -72,18 +77,29 @@ architecture Structural of Fetch_Stage is
     
     -- Control Unit Components
     component PC_Mux_Control is
-        Port (
-            int_load_pc : in STD_LOGIC;
-            rti_load_pc : in STD_LOGIC;
-            is_call : in STD_LOGIC;
-            is_conditional_jump : in STD_LOGIC;
-            is_ret : in STD_LOGIC;
-            is_unconditional_jump : in STD_LOGIC;
-            rst : in STD_LOGIC;
-            
-            -- Output
-            pc_mux_sel : out STD_LOGIC_VECTOR(1 downto 0)
-        );
+    Port (
+      
+        int_load_pc : in STD_LOGIC;          
+        rti_load_pc : in STD_LOGIC;
+                
+        -- Control signals from main control unit
+        is_ret : in std_logic; 
+        is_call : in STD_LOGIC;               -- CALL instruction
+        is_conditional_jump : in STD_LOGIC;   -- Conditional jump instruction
+        is_unconditional_jump : in STD_LOGIC; -- Unconditional jump instruction
+
+        --Dynamic branch prediction signals
+        is_branch_taken : in STD_LOGIC;
+        id_conditional_jump_inst : in STD_LOGIC;
+        ex_conditional_jump_inst : in STD_LOGIC;
+        ex_branch_evaluated : in STD_LOGIC;
+        
+        -- Reset (system-level signal)
+        rst : in STD_LOGIC;
+        
+        -- Output
+        pc_mux_sel : out STD_LOGIC_VECTOR(1 downto 0)
+    );
     end component;
     
     -- Internal Signals
@@ -125,7 +141,11 @@ begin
             is_ret => is_ret,
             is_unconditional_jump => is_unconditional_jump,
             rst => rst,
-            pc_mux_sel => pc_mux_sel_signal
+            pc_mux_sel => pc_mux_sel_signal,
+            is_branch_taken => is_branch_taken,
+            id_conditional_jump_inst => id_conditional_jump_inst,
+            ex_branch_evaluated => ex_branch_evaluated,
+            ex_conditional_jump_inst => ex_conditional_jump_inst
         );
     
     PC_Multiplexer: PC_Mux

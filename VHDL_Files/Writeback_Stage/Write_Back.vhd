@@ -93,7 +93,7 @@ begin
       when "01" => Write_Back_Data <= Mem_Result;
       when "10" => Write_Back_Data <= Input_Port_Data;
       when "11" => Write_Back_Data <= Input_Port_Data;
-      when others => Write_Back_Data <= (others => '0');
+      when others => Write_Back_Data <= TwoRegsDataMux;  -- Safe default: ALU result
     end case;
   end process;
 		

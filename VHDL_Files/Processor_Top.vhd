@@ -56,25 +56,44 @@ end Processor_Top;
 architecture Structural of Processor_Top is
     
     component Fetch_Stage is
-        Port (
-            clk : in STD_LOGIC;
-            rst : in STD_LOGIC;
-            pc_enable : in STD_LOGIC;
-            ifid_enable : in STD_LOGIC;
-            ifid_flush : in STD_LOGIC;
-            int_load_pc : in STD_LOGIC;
-            is_ret : in STD_LOGIC;
-            rti_load_pc : in STD_LOGIC;
-            is_call : in STD_LOGIC;
-            is_conditional_jump : in STD_LOGIC;
-            is_unconditional_jump : in STD_LOGIC;
-            immediate_decode : in STD_LOGIC_VECTOR(31 downto 0);
-            alu_immediate : in STD_LOGIC_VECTOR(31 downto 0);
-            pc_out : out STD_LOGIC_VECTOR(31 downto 0);
-            mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);
-            instruction_fetch : out STD_LOGIC_VECTOR(31 downto 0);
-            pc_plus_1_fetch : out STD_LOGIC_VECTOR(31 downto 0)
-        );
+    Port (
+        -- Clock and Reset
+        clk : in STD_LOGIC;
+        rst : in STD_LOGIC;
+        
+        -- Control Signals
+        pc_enable : in STD_LOGIC;
+        ifid_enable : in STD_LOGIC;
+        ifid_flush : in STD_LOGIC;
+        
+        -- Control Signals to PC_CU
+        int_load_pc : in STD_LOGIC;                         -- Load PC from memory
+        is_ret : in STD_LOGIC;                         -- Load PC  return address from memory
+        rti_load_pc : in STD_LOGIC;                      -- Load PC  return address from memory
+        is_call : in STD_LOGIC;                             -- Call instruction
+        is_conditional_jump : in STD_LOGIC;                  -- Conditional jump instruction
+        is_unconditional_jump : in STD_LOGIC;               -- Unconditional jump instruction
+
+        --Dynamic Branch Prediction Signals
+        is_branch_taken : in STD_LOGIC;
+        id_conditional_jump_inst : in STD_LOGIC;
+        ex_conditional_jump_inst : in STD_LOGIC;
+        ex_branch_evaluated : in STD_LOGIC;
+
+        -- Immediate values from decode stage
+        immediate_decode : in STD_LOGIC_VECTOR(31 downto 0); -- Immediate from decode (conditional jump)
+        
+        -- ALU/Immediate input
+        alu_immediate : in STD_LOGIC_VECTOR(31 downto 0);   -- From ALU (for CALL)
+        
+        -- Memory System Interface (to unified memory)
+        pc_out : out STD_LOGIC_VECTOR(31 downto 0);         -- PC to memory address mux
+        mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);   -- Data from memory
+        
+        -- Outputs to IF/ID Register (at top level)
+        instruction_fetch : out STD_LOGIC_VECTOR(31 downto 0);  -- Fetched instruction to IF/ID
+        pc_plus_1_fetch : out STD_LOGIC_VECTOR(31 downto 0)     -- PC+1 to IF/ID
+    );
     end component;
     
     component IF_ID_Register is
@@ -307,6 +326,7 @@ architecture Structural of Processor_Top is
 	    ex_rsrc1 : in std_logic_vector(2 downto 0); --Pop load use
 	    ex_rsrc2 : in std_logic_vector(2 downto 0); --Pop load use
 	    ex_is_conditional : in std_logic; --Conditional jump 
+        dbp_is_branch_taken : in std_logic; --Conditional jump 
 	    ex_has_one_operand : in std_logic; --Pop load use
 	    ex_has_two_operands : in std_logic; --Pop load use
 	    mem_is_int : in std_logic; --Interrupt
@@ -324,6 +344,27 @@ architecture Structural of Processor_Top is
 	    ex_mem_enable : out std_logic; --Pop load use / Swap
 	    mem_wb_enable : out std_logic; --Swap
 	    pc_enable : out std_logic --Fetch_Memory use
+    );
+    end component;
+
+    component Two_Bits_Dynamic_Prediction is
+    port(
+        clk, rst : in std_logic;
+        ex_is_jumping, ex_is_conditional_jump : in std_logic;
+        State_1 : in std_logic;
+        State_0 : in std_logic;
+        Next_State_1 : out std_logic;
+        Next_State_0 : out std_logic
+    );
+    end component;
+
+    component Not_Taken_After_Taken_Mux is
+    port(
+        ex_alu_result : in std_logic_vector(31 downto 0);
+        ex_pc_plus_one : in std_logic_vector(31 downto 0);
+        ex_is_conditional_jump_taken : in std_logic;
+        dbp_state_1 : in std_logic;
+        mux_out : out std_logic_vector(31 downto 0) 
     );
     end component;
     
@@ -554,6 +595,8 @@ architecture Structural of Processor_Top is
     signal has_two_operands_decode : STD_LOGIC;
     signal alu_address_enable_decode : STD_LOGIC;
     signal pc_plus_1_from_decode : STD_LOGIC_VECTOR(31 downto 0);
+
+    signal id_is_conditional_jump_inst : STD_LOGIC;
     
     -- Signals from ID/EX to Execute Stage
     signal idex_pc_plus_1 : STD_LOGIC_VECTOR(31 downto 0);
@@ -591,6 +634,13 @@ architecture Structural of Processor_Top is
     -- Jump control signals (direct connections, not pipelined)
     signal unconditional_branch_from_decode : STD_LOGIC;
     signal conditional_jump_from_execute : STD_LOGIC;
+
+    signal ex_is_conditional_jump_inst : STD_LOGIC;
+
+    --Dynamic branch prediction signals
+    signal dynamic_branch_prediction_state_1 : STD_LOGIC := '0';
+    signal dynamic_branch_prediction_state_0 : STD_LOGIC := '0';
+    signal alu_result_or_pc_plus_one : STD_LOGIC_VECTOR(31 downto 0);
     
     -- Signals from EX/MEM to Memory Stage
     signal exmem_rti_phase : STD_LOGIC;
@@ -679,6 +729,8 @@ architecture Structural of Processor_Top is
     signal forward_b : STD_LOGIC_VECTOR(3 downto 0);
     signal forward_ex_mem_data : STD_LOGIC_VECTOR(31 downto 0);
     signal forward_mem_wb_data : STD_LOGIC_VECTOR(31 downto 0);
+    signal forward_mux_a_sel : STD_LOGIC_VECTOR(1 downto 0);
+    signal forward_mux_b_sel : STD_LOGIC_VECTOR(1 downto 0);
     
     -- Input/Output Port signals
     signal input_port_registered : STD_LOGIC_VECTOR(31 downto 0);  -- Registered input
@@ -711,6 +763,35 @@ begin
     
     -- Output port enable when OUT instruction reaches writeback
     output_port_enable <= memwb_out_enable;
+
+    -- Decode 4-bit forwarding codes to 2-bit selector signals
+    -- forward_a/b(3) = '0' means EX/MEM (0001-0100) -> "01"
+    -- forward_a/b(3) = '1' means MEM/WB (0101-1001) -> "10"
+    process(forward_a)
+    begin
+        if forward_a = "0000" then
+            forward_mux_a_sel <= "00";  -- No forwarding
+        elsif forward_a(3) = '0' then
+            forward_mux_a_sel <= "01";  -- EX/MEM forwarding
+        else
+            forward_mux_a_sel <= "10";  -- MEM/WB forwarding
+        end if;
+    end process;
+    
+    process(forward_b)
+    begin
+        if forward_b = "0000" then
+            forward_mux_b_sel <= "00";  -- No forwarding
+        elsif forward_b(3) = '0' then
+            forward_mux_b_sel <= "01";  -- EX/MEM forwarding
+        else
+            forward_mux_b_sel <= "10";  -- MEM/WB forwarding
+        end if;
+    end process;
+
+    --Check whether execute stage has conditional jump instruction or not
+    ex_is_conditional_jump_inst <= idex_branchZ or idex_branchC or idex_branchN;
+    id_is_conditional_jump_inst <= branchZ_decode or branchC_decode or branchN_decode;
     
     -- Forwarding data selection for EX/MEM stage
     -- Select appropriate data based on forwarding control signals
@@ -733,6 +814,7 @@ begin
             -- 0100: Forward EX/MEM input port
             forward_ex_mem_data <= exmem_input_port_data;
         else
+            -- Default: ALU result
             forward_ex_mem_data <= exmem_alu_result;
         end if;
     end process;
@@ -740,10 +822,10 @@ begin
     -- Forwarding data selection for MEM/WB stage
     -- Select appropriate data based on forwarding control signals
     process(forward_a, forward_b, memwb_mem_data, memwb_r_data2, 
-            memwb_alu_result, memwb_input_port_data, wb_write_back_data)
+            memwb_alu_result, memwb_input_port_data)
     begin
-        -- Default to writeback data
-        forward_mem_wb_data <= wb_write_back_data;
+        -- Default to ALU result (most common case for forwarding)
+        forward_mem_wb_data <= memwb_alu_result;
         
         -- Check if any forwarding from MEM/WB is needed (codes 0101-1001)
         if (forward_a = "0101" or forward_b = "0101") then
@@ -762,7 +844,8 @@ begin
             -- 1001: Forward MEM/WB ALU result
             forward_mem_wb_data <= memwb_alu_result;
         else
-            forward_mem_wb_data <= wb_write_back_data;
+            -- Default case: also use ALU result (safer than wb_write_back_data which might be zero)
+            forward_mem_wb_data <= memwb_alu_result;
         end if;
     end process;
     
@@ -795,6 +878,7 @@ begin
 	        ex_rsrc1 => idex_read_reg1,
 	        ex_rsrc2 => idex_write_reg,
 	        ex_is_conditional => conditional_jump_from_execute,
+            dbp_is_branch_taken => dynamic_branch_prediction_state_1,
 	        ex_has_one_operand => idex_has_one_operand,
 	        ex_has_two_operands => idex_has_two_operands,
 	        mem_is_int => exmem_is_int,
@@ -813,6 +897,27 @@ begin
             mem_wb_enable => hdu_memwb_enable,
 	        pc_enable => hdu_pc_enable
        );
+
+    DBP : Two_Bits_Dynamic_Prediction 
+        port map(
+            clk => clk,
+            rst => rst,
+            ex_is_jumping => conditional_jump_from_execute,
+            ex_is_conditional_jump => ex_is_conditional_jump_inst,
+            State_1 => dynamic_branch_prediction_state_1,
+            State_0 => dynamic_branch_prediction_state_0,
+            Next_State_1 => dynamic_branch_prediction_state_1,
+            Next_State_0 => dynamic_branch_prediction_state_0
+         );
+
+    NTAT : Not_Taken_After_Taken_Mux 
+        port map(
+        ex_alu_result => exmem_alu_result,
+        ex_pc_plus_one => idex_pc_plus_1,
+        ex_is_conditional_jump_taken => conditional_jump_from_execute,
+        dbp_state_1 => dynamic_branch_prediction_state_1,
+        mux_out => alu_result_or_pc_plus_one
+    );
     
     Fetch: Fetch_Stage
         port map (
@@ -828,11 +933,15 @@ begin
             is_conditional_jump => conditional_jump_from_execute,
             is_unconditional_jump => unconditional_branch_from_decode,
             immediate_decode => instruction_decode_signal,
-            alu_immediate => exmem_alu_result,
+            alu_immediate => alu_result_or_pc_plus_one,
             pc_out => mem_address,
             mem_read_data => mem_read_data,
             instruction_fetch => instruction_fetch_signal,
-            pc_plus_1_fetch => pc_plus_1_fetch_signal
+            pc_plus_1_fetch => pc_plus_1_fetch_signal,
+            is_branch_taken => dynamic_branch_prediction_state_1,
+            id_conditional_jump_inst => id_is_conditional_jump_inst,
+            ex_conditional_jump_inst => ex_is_conditional_jump_inst,
+            ex_branch_evaluated => conditional_jump_from_execute
         );
     
     IFID_Reg: IF_ID_Register
@@ -1002,8 +1111,8 @@ begin
             if_id_immediate => instruction_decode_signal,
             forward_ex_mem => forward_ex_mem_data,
             forward_mem_wb => forward_mem_wb_data,
-            forward_mux_a_sel => forward_a(1 downto 0),
-            forward_mux_b_sel => forward_b(1 downto 0),
+            forward_mux_a_sel => forward_mux_a_sel,
+            forward_mux_b_sel => forward_mux_b_sel,
             input_port => input_port_registered,
             ex_mem_rti_phase => ex_mem_rti_phase,
             ex_mem_int_phase => ex_mem_int_phase,

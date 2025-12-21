@@ -356,7 +356,7 @@ begin
     conditional_jump <= cond_branchZ or cond_branchC or cond_branchN;
     
     -- PC+2 calculation (PC+1 from ID/EX + 1)
-    pc_plus_2 <=id_ex_pc_plus_1;
+    pc_plus_2 <= std_logic_vector(unsigned(id_ex_pc_plus_1) + 1);
     
     -- Pass-through control signals to EX/MEM Pipeline Register
     ex_mem_rti_phase  <= id_ex_rti_phase;
