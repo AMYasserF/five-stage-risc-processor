@@ -6,6 +6,9 @@ use IEEE.NUMERIC_STD.ALL;
 -- Top-level processor integration
 -- Integrates all 5 pipeline stages with unified internal memory
 entity Processor_Top is
+    generic (
+        PROGRAM_FILE : string := "mem.txt"  -- Default filename
+    );
     Port (
         -- Clock and Reset
         clk : in STD_LOGIC;
@@ -500,21 +503,27 @@ architecture Structural of Processor_Top is
     
     -- Unified Memory Component
     component Unified_Memory is
-        Port (
-            clk : in STD_LOGIC;
-            rst : in STD_LOGIC;
-            hlt : in STD_LOGIC;
-            fetch_address : in STD_LOGIC_VECTOR(31 downto 0);
-            fetch_data_out : out STD_LOGIC_VECTOR(31 downto 0);
-            mem_stage_address : in STD_LOGIC_VECTOR(31 downto 0);
-            mem_stage_write_data : in STD_LOGIC_VECTOR(31 downto 0);
-            mem_stage_read : in STD_LOGIC;
-            mem_stage_write : in STD_LOGIC;
-            mem_stage_data_out : out STD_LOGIC_VECTOR(31 downto 0);
-            mem_stage_active : in STD_LOGIC;
-            pc_init_value : out STD_LOGIC_VECTOR(31 downto 0);
-            pc_init_valid : out STD_LOGIC
-        );
+    generic (
+        PROGRAM_FILE : string := "mem.txt"
+    );
+    Port (
+        clk : in STD_LOGIC;
+        rst : in STD_LOGIC;
+        hlt : in STD_LOGIC;
+        -- Fetch port (read-only, read has priority)
+        fetch_address : in STD_LOGIC_VECTOR(31 downto 0);
+        fetch_data_out : out STD_LOGIC_VECTOR(31 downto 0);
+        -- Memory stage port (read/write)
+        mem_stage_address : in STD_LOGIC_VECTOR(31 downto 0);
+        mem_stage_write_data : in STD_LOGIC_VECTOR(31 downto 0);
+        mem_stage_read : in STD_LOGIC;
+        mem_stage_write : in STD_LOGIC;
+        mem_stage_data_out : out STD_LOGIC_VECTOR(31 downto 0);
+        mem_stage_active : in STD_LOGIC;
+        -- PC initialization interface
+        pc_init_value : out STD_LOGIC_VECTOR(31 downto 0);
+        pc_init_valid : out STD_LOGIC
+    );
     end component;
     
     component Mem_Wb_Register is
@@ -1511,6 +1520,9 @@ begin
     -- Provides PC initialization from memory[0] on reset
     -- Note: Memory signals can be overridden by external interrupt
     Unified_Mem: Unified_Memory
+        generic map (
+            PROGRAM_FILE => PROGRAM_FILE
+        )
         port map (
             clk => clk,
             rst => rst,

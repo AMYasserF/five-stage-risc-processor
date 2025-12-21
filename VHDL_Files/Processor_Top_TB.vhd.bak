@@ -9,6 +9,9 @@ end Processor_Top_TB;
 architecture Behavioral of Processor_Top_TB is
     
     component Processor_Top is
+        generic (
+            PROGRAM_FILE : string := "mem.txt"
+        );
         Port (
             clk : in STD_LOGIC;
             rst : in STD_LOGIC;
@@ -156,6 +159,9 @@ begin
     
     -- Instantiate processor
     UUT: Processor_Top
+        generic map (
+            PROGRAM_FILE => "mem.txt"  -- This matches your assembler's default output
+        )
         port map (
             clk => clk,
             rst => rst,

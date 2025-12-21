@@ -1,316 +1,199 @@
 # =====================================
-# FULL ISA ASSEMBLER
-# R / I / J / SYSTEM-STACK
-# Supports hex numbers, .ORG directive, comments
+# FULL ISA ASSEMBLER (FIXED)
+# Supports: R / I / J / SYSTEM-STACK
+# Fixed: Instruction priority and INTx shorthand
 # =====================================
 
 import re
 import sys
 
-# ------------ R TYPE -----------------
+# ------------ Opcode Map (Opcodes preserved per requirement) ------------
 R_TYPE_FUNCS = {
     "NOP":0b0000, "SETC":0b0001, "NOT":0b0010, "INC":0b0011,
     "OUT":0b0100, "IN":0b0101, "MOV":0b0110, "SWAP":0b0111,
     "ADD":0b1000, "SUB":0b1001, "AND":0b1010
 }
 
-# ------------ I TYPE -----------------
 I_TYPE_FUNCS = {
     "IADD":0b0001,"LDM":0b0010,"LDD":0b0011,"STD":0b0100
 }
 
-# ------------ J TYPE -----------------
 J_TYPE_FUNCS = {
     "JMP":0b0001,"JZ":0b0010,"JN":0b0011,"JC":0b0100,"CALL":0b0101,"RET":0b0110
 }
 
-# ------------ SYSTEM STACK ----------
 SYS_FUNCS = {
     "PUSH":0b0001,"POP":0b0010,
     "INT":0b0011,"RTI":0b0100,"HLT":0b0101
 }
 
-# ------------------------------------
+# ---------------- Helper Functions ----------------
 
 def reg(r):
-    """Parse register name like R0-R7"""
-    r = r.upper().strip()
+    """Parses register strings like 'R1' to integer index 1."""
+    r = r.upper().strip().replace(",", "")
     if r.startswith("R"):
-        n = int(r[1:])
-        if 0 <= n <= 7:
-            return n
-    raise ValueError("Invalid Register: " + r)
+        try:
+            n = int(r[1:])
+            if 0 <= n <= 7:
+                return n
+        except ValueError:
+            pass
+    raise ValueError(f"Invalid Register format: {r}")
 
 def parse_hex(s):
-    """Parse a hex number (without 0x prefix by default)"""
-    s = s.strip()
-    # Remove optional 0x prefix
-    if s.lower().startswith("0x"):
+    """Parses hex strings to integers. All numbers are hex per spec."""
+    s = s.strip().lower()
+    if s.startswith("0x"):
         return int(s, 16)
-    # Try to parse as hex first (since all numbers in hex format per spec)
-    try:
-        return int(s, 16)
-    except ValueError:
-        # Fallback to decimal if it looks decimal
-        return int(s, 10)
-
-def parse_offset_reg(operand):
-    """
-    Parse operand formats like:
-    - "50(R0)" -> (50, "R0")
-    - "0(R4)" -> (0, "R4")
-    Returns (offset, register_name)
-    """
-    match = re.match(r'([0-9A-Fa-f]+)\((\w+)\)', operand.strip())
-    if match:
-        offset = parse_hex(match.group(1))
-        reg_name = match.group(2)
-        return offset, reg_name
-    raise ValueError(f"Invalid offset(reg) format: {operand}")
-
-# ------------------------------------
+    return int(s, 16)
 
 def build_opcode(hasImm, typ, func):
+    """Builds the 7-bit opcode field: [hasImm(1 bit) | Type(2 bits) | Func(4 bits)]."""
     return (hasImm << 6) | (typ << 4) | func
 
 def inst_word(op, rd=0, rs1=0, rs2=0):
+    """Constructs the first 32-bit instruction word (upper 16 bits used)."""
     return (op << 25) | (rd << 22) | (rs1 << 19) | (rs2 << 16)
 
-# ------------------------------------
+# ---------------- Main Assembler Logic ----------------
 
 def assemble(lines):
-    """
-    Assemble source lines into memory image.
-    Returns a dictionary: address -> value
-    """
     mem = {}
     current_addr = 0
 
     for line_num, ln in enumerate(lines, 1):
-        # Remove comments (both # and ; style)
-        ln = ln.split('#')[0].split(';')[0].strip()
-        
-        # Skip empty lines
+        # 1. Pre-process: Strip comments and whitespace
+        ln = ln.split('#')[0].split('//')[0].split(';')[0].strip()
         if not ln:
             continue
 
-        # Handle .ORG directive - address is in DECIMAL
+        # 2. Handle .ORG directive
         if ln.upper().startswith('.ORG'):
             parts = ln.split()
-            if len(parts) >= 2:
-                # .ORG addresses are decimal for ease of use
-                current_addr = int(parts[1], 10)
+            if len(parts) < 2:
+                raise ValueError(f"Line {line_num}: Missing .ORG address")
+            current_addr = parse_hex(parts[1])
             continue
 
-        # Check if line is just a raw number (data value like reset address)
-        # These are addresses/vectors - also interpreted as DECIMAL
+        # 3. Tokenize
         tokens = ln.replace(",", " ").split()
-        if len(tokens) == 1:
-            try:
-                # Data values (like reset vector) are decimal addresses
-                val = int(tokens[0], 10)
-                mem[current_addr] = val & 0xffffffff
-                current_addr += 1
-                continue
-            except ValueError:
-                pass  # Not a number, continue to instruction parsing
-
         ins = tokens[0].upper()
 
-        # ---------------- R TYPE ----------------
+        # 4. Handle INTx Shorthand (e.g., INT0 -> INT 0)
+        if ins.startswith("INT") and len(ins) > 3:
+            val = ins[3:]
+            ins = "INT"
+            tokens = ["INT", val]
+
+        # 5. Process Instructions (Prioritized over raw data)
+        processed = False
+
+        # --- R TYPE ---
         if ins in R_TYPE_FUNCS:
             op = build_opcode(0, 0b00, R_TYPE_FUNCS[ins])
-
-            if ins in ["NOP", "SETC"]:
-                rd = rs1 = rs2 = 0
-
-            elif ins in ["NOT", "INC"]:
-                rd = reg(tokens[1])
-                rs1 = rd
-                rs2 = 0
-
+            rd = rs1 = rs2 = 0
+            if ins in ["NOT", "INC"]:
+                rd = reg(tokens[1]); rs1 = rd
             elif ins == "OUT":
-                rd = 0
                 rs1 = reg(tokens[1])
-                rs2 = 0
-
             elif ins == "IN":
                 rd = reg(tokens[1])
-                rs1 = 0
-                rs2 = 0
-
             elif ins == "MOV":
-                rs1 = reg(tokens[1])
-                rd = reg(tokens[2])
-                rs2 = 0
-
+                rs1 = reg(tokens[1]); rd = reg(tokens[2])
             elif ins == "SWAP":
-                rs1 = reg(tokens[1])
-                rd = reg(tokens[2])
-                rs2 = rd
+                rs1 = reg(tokens[1]); rd = reg(tokens[2]); rs2 = rd
+            elif ins in ["ADD", "SUB", "AND"]:
+                rd = reg(tokens[1]); rs1 = reg(tokens[2]); rs2 = reg(tokens[3])
+            
+            mem[current_addr] = inst_word(op, rd, rs1, rs2)
+            current_addr += 1
+            processed = True
 
-            else:  # ADD, SUB, AND
+        # --- I TYPE ---
+        elif ins in I_TYPE_FUNCS:
+            op = build_opcode(1, 0b01, I_TYPE_FUNCS[ins])
+            rd = rs1 = rs2 = 0
+            if ins == "IADD":
+                rd = reg(tokens[1]); rs1 = reg(tokens[2]); imm = parse_hex(tokens[3])
+            elif ins == "LDM":
+                rd = reg(tokens[1]); imm = parse_hex(tokens[2])
+            elif ins == "LDD":
                 rd = reg(tokens[1])
-                rs1 = reg(tokens[2])
-                rs2 = reg(tokens[3])
+                m = re.match(r'([0-9A-Fa-f]+)\((\w+)\)', tokens[2].strip())
+                imm = parse_hex(m.group(1)); rs1 = reg(m.group(2))
+            elif ins == "STD":
+                src = reg(tokens[1])
+                m = re.match(r'([0-9A-Fa-f]+)\((\w+)\)', tokens[2].strip())
+                imm = parse_hex(m.group(1)); rs1 = src; rs2 = reg(m.group(2))
 
             mem[current_addr] = inst_word(op, rd, rs1, rs2)
             current_addr += 1
-
-        # ---------------- I TYPE ----------------
-        elif ins in I_TYPE_FUNCS:
-            op = build_opcode(1, 0b01, I_TYPE_FUNCS[ins])
-
-            if ins == "IADD":
-                # IADD R5, R3, 2 -> R5 = R3 + imm
-                rd = reg(tokens[1])
-                rs1 = reg(tokens[2])
-                rs2 = 0
-                imm = parse_hex(tokens[3])
-
-            elif ins == "LDM":
-                # LDM R2, 10FE19 -> R2 = imm
-                rd = reg(tokens[1])
-                rs1 = rs2 = 0
-                imm = parse_hex(tokens[2])
-
-            elif ins == "LDD":
-                # LDD R3, 51(R0) -> R3 = M[R0 + 51]
-                rd = reg(tokens[1])
-                imm, base_reg = parse_offset_reg(tokens[2])
-                rs1 = reg(base_reg)
-                rs2 = 0
-
-            elif ins == "STD":
-                # STD R2, 50(R0) -> M[R0 + 50] = R2
-                src_reg = reg(tokens[1])
-                imm, base_reg = parse_offset_reg(tokens[2])
-                rd = 0
-                rs1 = src_reg
-                rs2 = reg(base_reg)
-
-            # Write instruction word
-            if ins == "STD":
-                # STD: swap so base register goes to rs1 position
-                mem[current_addr] = inst_word(op, rd, rs2, rs1)
-            else:
-                mem[current_addr] = inst_word(op, rd, rs1, rs2)
-            current_addr += 1
-            
-            # Write immediate value
             mem[current_addr] = imm & 0xffffffff
             current_addr += 1
+            processed = True
 
-        # ---------------- J TYPE ----------------
+        # --- J TYPE ---
         elif ins in J_TYPE_FUNCS:
             if ins == "RET":
-                op = build_opcode(0, 0b10, J_TYPE_FUNCS[ins])  # hasImm=0 for RET
+                op = build_opcode(0, 0b10, J_TYPE_FUNCS[ins])
                 mem[current_addr] = inst_word(op)
                 current_addr += 1
             else:
-                op = build_opcode(1, 0b10, J_TYPE_FUNCS[ins])  # hasImm=1 for others
+                op = build_opcode(1, 0b10, J_TYPE_FUNCS[ins])
                 target = parse_hex(tokens[1])
                 mem[current_addr] = inst_word(op)
                 current_addr += 1
                 mem[current_addr] = target & 0xffffffff
                 current_addr += 1
+            processed = True
 
-        # ---------------- SYSTEM STACK ----------
+        # --- SYSTEM STACK ---
         elif ins in SYS_FUNCS:
             needImm = (ins == "INT")
             op = build_opcode(1 if needImm else 0, 0b11, SYS_FUNCS[ins])
-
-            if ins in ["RTI", "HLT"]:
-                rd = rs1 = rs2 = 0
-
-            elif ins == "PUSH":
-                rd = 0
+            rd = rs1 = rs2 = 0
+            if ins == "PUSH": 
                 rs1 = reg(tokens[1])
-                rs2 = 0
-
-            elif ins == "POP":
+            elif ins == "POP": 
                 rd = reg(tokens[1])
-                rs1 = 0
-                rs2 = 0
-
-            elif ins == "INT":
-                rd = rs1 = rs2 = 0
+            elif ins == "INT": 
                 imm = parse_hex(tokens[1])
 
             mem[current_addr] = inst_word(op, rd, rs1, rs2)
             current_addr += 1
-
             if needImm:
                 mem[current_addr] = imm & 0xffffffff
                 current_addr += 1
+            processed = True
 
-        else:
-            raise ValueError(f"Line {line_num}: Unknown instruction '{ins}'")
+        if processed:
+            continue
+
+        # 6. Fallback: Raw Data Word (Used for reset/interrupt vectors)
+        try:
+            val = parse_hex(tokens[0])
+            mem[current_addr] = val & 0xffffffff
+            current_addr += 1
+        except ValueError:
+            raise ValueError(f"Line {line_num}: Unrecognized instruction or invalid hex '{tokens[0]}'")
 
     return mem
 
-# ------------------------------------
-
 def write_mem(mem, filename="mem.txt"):
-    """
-    Write memory to file in binary format.
-    Format: one 32-bit binary value per line
-    Fills gaps with zeros
-    """
-    if not mem:
-        print("Warning: Empty program!")
-        return
-    
-    max_addr = max(mem.keys())
-    
+    """Generates the 32-bit binary memory image."""
+    max_addr = max(mem.keys(), default=0)
     with open(filename, "w") as f:
         for addr in range(max_addr + 1):
-            val = mem.get(addr, 0)
-            f.write(f"{val:032b}\n")
-
-    print(f"✅ {filename} generated ({max_addr + 1} words)")
-
-def write_mem_hex(mem, filename="mem_hex.txt"):
-    """
-    Write memory to file in hex format with addresses (for debugging)
-    """
-    if not mem:
-        return
-    
-    max_addr = max(mem.keys())
-    
-    with open(filename, "w") as f:
-        for addr in range(max_addr + 1):
-            val = mem.get(addr, 0)
-            f.write(f"{addr:04X}: {val:08X}\n")
-
-    print(f"✅ {filename} generated (hex debug format)")
-
-# ------------------------------------
+            f.write(f"{mem.get(addr, 0):032b}\n")
+    print(f"✅ Assembly complete. {filename} generated (Max Addr: {max_addr:X}h)")
 
 if __name__ == "__main__":
-    # Determine input file
-    if len(sys.argv) > 1:
-        input_file = sys.argv[1]
-    else:
-        input_file = "program.asm"
-    
-    print(f"Assembling: {input_file}")
-    
+    input_file = sys.argv[1] if len(sys.argv) > 1 else "program.asm"
     try:
-        with open(input_file, encoding="utf8") as f:
-            asm = f.readlines()
-    except FileNotFoundError:
-        print(f"Error: File '{input_file}' not found!")
-        sys.exit(1)
-
-    try:
-        mc = assemble(asm)
-        write_mem(mc)
-        write_mem_hex(mc)
-        
-        print("✅ FULL ISA ASSEMBLE DONE")
-        print(f"✅ TOTAL WORDS = {max(mc.keys()) + 1 if mc else 0}")
+        with open(input_file) as f:
+            asm_content = f.readlines()
+        memory_map = assemble(asm_content)
+        write_mem(memory_map)
     except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+        print(f"❌ ERROR: {e}")

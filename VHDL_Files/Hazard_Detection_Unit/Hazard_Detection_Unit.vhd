@@ -58,7 +58,7 @@ begin
 	   ex_flush <= '0';
 	 end if;
 
-	 if(mem_is_ret = '1' or (mem_is_rti = '1' and mem_rti_phase = '1') or (mem_is_int = '1' and mem_int_phase = "10") or ((((mem_rdst = ex_rsrc1) and (ex_has_one_operand = '1' or ex_has_two_operands = '1')) or ((mem_rdst = ex_rsrc2) and ex_has_two_operands = '1')) and mem_is_pop = '1')) then 
+	 if(mem_is_ret = '1' or (mem_is_rti = '1' and mem_rti_phase = "01") or (mem_is_int = '1' and mem_int_phase = "10") or ((((mem_rdst = ex_rsrc1) and (ex_has_one_operand = '1' or ex_has_two_operands = '1')) or ((mem_rdst = ex_rsrc2) and ex_has_two_operands = '1')) and mem_is_pop = '1')) then 
            ex_flush <= '1';
 	 else
   	   ex_flush <= '0';
