@@ -18,7 +18,7 @@ VVQP_^0LzZHlXimco2DP6z3
 Z8 OV;C;10.1b;51
 33
 !i10b 1
-Z9 !s108 1766294706.149000
+Z9 !s108 1766308878.274000
 Z10 !s90 -reportprogress|300|-2008|-explicit|Fetch_Stage/PC_Register.vhd|Fetch_Stage/PC_Adder.vhd|Fetch_Stage/PC_Mux.vhd|Fetch_Stage/Fetch_Control_Units/PC_Mux_Control.vhd|Fetch_Stage/IF_ID_Register.vhd|Fetch_Stage/Fetch_Stage.vhd|Decode_Stage/register_file.vhd|Decode_Stage/control_unit.vhd|Decode_Stage/decode_stage.vhd|Decode_Stage/ID_EX_register.vhd|Excute_Stage/ALU.vhd|Excute_Stage/ALU_OperandA_Mux.vhd|Excute_Stage/ALU_OperandB_Mux.vhd|Excute_Stage/Branch_Logic.vhd|Excute_Stage/CCR_Register.vhd|Excute_Stage/CCR_Branch_Unit.vhd|Excute_Stage/CCR_Mux.vhd|Excute_Stage/Execute_Stage.vhd|Excute_Stage/EX_MEM_Register.vhd|Memory_System/Memory.vhd|Memory_System/Unified_Memory.vhd|Memory_System/SP_Components/SP_Register.vhd|Memory_System/SP_Components/SP_Adder.vhd|Memory_System/SP_Components/SP_Mux.vhd|Memory_System/SP_Components/SP_Control_Unit.vhd|Memory_System/Memory_Address_Components/ALU_Plus_2_Adder.vhd|Memory_System/Memory_Address_Components/Memory_Address_Mux.vhd|Memory_System/Memory_Address_Components/Memory_Address_Control_Unit.vhd|Memory_System/Memory_Write_Data_Components/Memory_Write_Data_Mux.vhd|Memory_System/Memory_Write_Data_Components/Memory_Write_Data_Control_Unit.vhd|Memory_System/Control_Units/INT_Control_Unit.vhd|Memory_System/Control_Units/RTI_Control_Unit.vhd|Memory_Stage/Memory_Stage.vhd|Memory_Stage/Mem_Wb_Register.vhd|Writeback_Stage/Write_Back.vhd|IO_Ports/Input_Port_Register.vhd|IO_Ports/Output_Port_Register.vhd|Forwarding_Unit.vhd|Hazard_Detection_Unit/Hazard_Detection_Unit.vhd|Two_Bits_Dynamic_Branch_Prediction/Two_Bits_Dynamic_Branch_Prediction.vhd|Two_Bits_Dynamic_Branch_Prediction/Not_Taken_After_Taken_Mux.vhd|Processor_Top.vhd|Processor_Top_TB.vhd|
 Z11 !s107 Processor_Top_TB.vhd|Processor_Top.vhd|Two_Bits_Dynamic_Branch_Prediction/Not_Taken_After_Taken_Mux.vhd|Two_Bits_Dynamic_Branch_Prediction/Two_Bits_Dynamic_Branch_Prediction.vhd|Hazard_Detection_Unit/Hazard_Detection_Unit.vhd|Forwarding_Unit.vhd|IO_Ports/Output_Port_Register.vhd|IO_Ports/Input_Port_Register.vhd|Writeback_Stage/Write_Back.vhd|Memory_Stage/Mem_Wb_Register.vhd|Memory_Stage/Memory_Stage.vhd|Memory_System/Control_Units/RTI_Control_Unit.vhd|Memory_System/Control_Units/INT_Control_Unit.vhd|Memory_System/Memory_Write_Data_Components/Memory_Write_Data_Control_Unit.vhd|Memory_System/Memory_Write_Data_Components/Memory_Write_Data_Mux.vhd|Memory_System/Memory_Address_Components/Memory_Address_Control_Unit.vhd|Memory_System/Memory_Address_Components/Memory_Address_Mux.vhd|Memory_System/Memory_Address_Components/ALU_Plus_2_Adder.vhd|Memory_System/SP_Components/SP_Control_Unit.vhd|Memory_System/SP_Components/SP_Mux.vhd|Memory_System/SP_Components/SP_Adder.vhd|Memory_System/SP_Components/SP_Register.vhd|Memory_System/Unified_Memory.vhd|Memory_System/Memory.vhd|Excute_Stage/EX_MEM_Register.vhd|Excute_Stage/Execute_Stage.vhd|Excute_Stage/CCR_Mux.vhd|Excute_Stage/CCR_Branch_Unit.vhd|Excute_Stage/CCR_Register.vhd|Excute_Stage/Branch_Logic.vhd|Excute_Stage/ALU_OperandB_Mux.vhd|Excute_Stage/ALU_OperandA_Mux.vhd|Excute_Stage/ALU.vhd|Decode_Stage/ID_EX_register.vhd|Decode_Stage/decode_stage.vhd|Decode_Stage/control_unit.vhd|Decode_Stage/register_file.vhd|Fetch_Stage/Fetch_Stage.vhd|Fetch_Stage/IF_ID_Register.vhd|Fetch_Stage/Fetch_Control_Units/PC_Mux_Control.vhd|Fetch_Stage/PC_Mux.vhd|Fetch_Stage/PC_Adder.vhd|Fetch_Stage/PC_Register.vhd|
 Z12 o-2008 -explicit -O0
@@ -1495,7 +1495,7 @@ R11
 R12
 R13
 Eunified_memory
-Z239 w1766288664
+Z239 w1766308579
 R126
 R2
 R3
@@ -1504,9 +1504,9 @@ R5
 Z240 8Memory_System/Unified_Memory.vhd
 Z241 FMemory_System/Unified_Memory.vhd
 l0
-L11
+L7
 VkhZ9eS]^@g2`QjIPJK?S=1
-!s100 Wi?TJkF>BKZVMUe2Td>Cj3
+!s100 Z^82;SFWFI5UFL?lQXbHN0
 R8
 33
 !i10b 1
@@ -1521,10 +1521,10 @@ R2
 R3
 R4
 Z242 DEx4 work 14 unified_memory 0 22 khZ9eS]^@g2`QjIPJK?S=1
-l73
-L35
-Z243 V1hfIl8>37@BgO4VBR9FY@0
-Z244 !s100 0`e8L6kULbgI0g]dh1H_71
+l113
+L28
+Z243 VZ<D0Sg^gLAj[KTGcYaIh?3
+Z244 !s100 bKYS`V?^HJCU60]zFWLUX2
 R8
 33
 !i10b 1
