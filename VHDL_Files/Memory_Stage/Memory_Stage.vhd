@@ -52,6 +52,9 @@ entity Memory_Stage is
         -- SP value output (for RET to read from stack)
         sp_value_out : out STD_LOGIC_VECTOR(31 downto 0);
         
+        -- External Interrupt control signals
+        ext_int_sp_dec : in STD_LOGIC;        -- External interrupt decrement SP
+        
         -- Outputs to Fetch Stage (PC control)
         int_load_pc_out : out STD_LOGIC;
         rti_load_pc_out : out STD_LOGIC;
@@ -126,6 +129,7 @@ architecture Structural of Memory_Stage is
             is_ret : in STD_LOGIC;
             int_sp_operation : in STD_LOGIC;
             rti_sp_operation : in STD_LOGIC;
+            ext_int_sp_dec : in STD_LOGIC;
             rst : in STD_LOGIC;
             sp_mux_sel : out STD_LOGIC;
             sp_enable : out STD_LOGIC
@@ -314,6 +318,7 @@ begin
             is_ret => is_ret,
             int_sp_operation => int_sp_operation,
             rti_sp_operation => rti_sp_operation,
+            ext_int_sp_dec => ext_int_sp_dec,
             rst => rst,
             sp_mux_sel => sp_mux_sel,
             sp_enable => sp_enable

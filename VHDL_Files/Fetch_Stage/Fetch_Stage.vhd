@@ -17,6 +17,7 @@ entity Fetch_Stage is
         int_load_pc : in STD_LOGIC;                         -- Load PC from memory
         is_ret : in STD_LOGIC;                              -- Load PC return address from memory
         rti_load_pc : in STD_LOGIC;                         -- Load PC return address from memory
+        ext_int_load_pc : in STD_LOGIC;                     -- External interrupt load PC from M[1]
         is_call : in STD_LOGIC;                             -- Call instruction
         is_conditional_jump : in STD_LOGIC;                 -- Conditional jump instruction
         is_unconditional_jump : in STD_LOGIC;               -- Unconditional jump instruction
@@ -74,6 +75,7 @@ architecture Structural of Fetch_Stage is
         Port (
             int_load_pc : in STD_LOGIC;
             rti_load_pc : in STD_LOGIC;
+            ext_int_load_pc : in STD_LOGIC;
             is_call : in STD_LOGIC;
             is_conditional_jump : in STD_LOGIC;
             is_ret : in STD_LOGIC;
@@ -123,6 +125,7 @@ begin
         port map (
             int_load_pc => int_load_pc,
             rti_load_pc => rti_load_pc,
+            ext_int_load_pc => ext_int_load_pc,
             is_call => is_call,
             is_conditional_jump => is_conditional_jump,
             is_ret => is_ret,

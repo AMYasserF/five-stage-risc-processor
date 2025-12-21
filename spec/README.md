@@ -11,7 +11,63 @@ This assembler converts assembly language instructions into 32-bit machine code 
 - **4 Instruction Types**: R-type, I-type, J-type, and System/Stack operations
 - **8 General-Purpose Registers**: R0 through R7
 - **32-bit Instructions**: Fixed-width instruction format
-- **Memory Output**: Generates `mem.txt` with binary machine code
+- **Memory Output**: Generates `mem.txt` with binary machine code and `mem_hex.txt` for debugging
+- **`.ORG` Directive**: Set memory address for code placement
+- **Comments**: Supports `#` and `;` style comments
+- **Hex Immediates**: All immediate values (except .ORG) in hexadecimal
+
+## Usage
+
+```bash
+python assembler.py [input_file.asm]
+```
+
+If no input file is specified, it defaults to `program.asm`.
+
+### Output Files
+
+- `mem.txt` - Binary format (32 bits per line), used by VHDL Memory
+- `mem_hex.txt` - Hex format with addresses (for debugging)
+
+## Assembly Syntax
+
+### Directives
+
+- `.ORG <address>` - Set current address (decimal)
+
+### Comments
+
+- `# comment` - Line comment (text after # is ignored)
+- `; comment` - Line comment (text after ; is ignored)
+
+### Data Values
+
+- Raw numbers on their own line are stored as data (decimal for addresses/vectors)
+- Instruction immediates use hexadecimal (without 0x prefix)
+
+### Example Program
+
+```assembly
+# Reset and interrupt vectors
+.ORG 0
+200             # Reset address (PC starts here)
+
+.ORG 1
+300             # External interrupt handler address
+
+.ORG 200
+# Main program
+LDM R2, 10FE19  # R2 = 0x10FE19 (hex immediate)
+LDD R1, 50(R0)  # R1 = M[R0 + 0x50]
+STD R2, 51(R0)  # M[R0 + 0x51] = R2
+ADD R1, R2, R3  # R1 = R2 + R3
+HLT             # Halt processor
+
+.ORG 300
+# Interrupt handler
+PUSH R1
+RTI
+```
 
 ## Instruction Set Architecture
 
@@ -39,10 +95,12 @@ Include a 32-bit immediate value (second word).
 
 | Instruction            | Opcode | Description                          |
 | ---------------------- | ------ | ------------------------------------ |
-| `IADD Rd, Rs1, imm`    | 0001   | Rd = Rs1 + imm                       |
+| `IADD Rd, Rs1, imm`    | 0001   | Rd = Rs1 + imm (hex immediate)       |
 | `LDM Rd, imm`          | 0010   | Load immediate value to Rd           |
-| `LDD Rd, Rs1, offset`  | 0011   | Load from memory[Rs1 + offset] to Rd |
-| `STD Rs1, Rs2, offset` | 0100   | Store Rs1 to memory[Rs2 + offset]    |
+| `LDD Rd, offset(Rs1)`  | 0011   | Load from memory[Rs1 + offset] to Rd |
+| `STD Rs1, offset(Rs2)` | 0100   | Store Rs1 to memory[Rs2 + offset]    |
+
+**Note**: LDD and STD use `offset(register)` syntax, e.g., `LDD R3, 50(R0)` loads from `M[R0+0x50]`
 
 ### J-Type Instructions (Jump/Branch)
 

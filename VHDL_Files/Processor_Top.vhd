@@ -11,6 +11,9 @@ entity Processor_Top is
         clk : in STD_LOGIC;
         rst : in STD_LOGIC;
         
+        -- External Interrupt Signal
+        interrupt : in STD_LOGIC;  -- External interrupt (like reset but saves state)
+        
         -- Input/Output Ports
         input_port : in STD_LOGIC_VECTOR(31 downto 0);
         output_port : out STD_LOGIC_VECTOR(31 downto 0);
@@ -61,6 +64,7 @@ architecture Structural of Processor_Top is
             int_load_pc : in STD_LOGIC;
             is_ret : in STD_LOGIC;
             rti_load_pc : in STD_LOGIC;
+            ext_int_load_pc : in STD_LOGIC;
             is_call : in STD_LOGIC;
             is_conditional_jump : in STD_LOGIC;
             is_unconditional_jump : in STD_LOGIC;
@@ -423,6 +427,7 @@ architecture Structural of Processor_Top is
             mem_write_enable : out STD_LOGIC;
             mem_stage_active : out STD_LOGIC;
             sp_value_out : out STD_LOGIC_VECTOR(31 downto 0);
+            ext_int_sp_dec : in STD_LOGIC;
             int_load_pc_out : out STD_LOGIC;
             rti_load_pc_out : out STD_LOGIC;
             rti_load_ccr_out : out STD_LOGIC;
@@ -708,6 +713,19 @@ architecture Structural of Processor_Top is
     signal mem_int_counter : STD_LOGIC_VECTOR(1 downto 0);  -- INT counter from Memory Stage
     signal mem_rti_counter : STD_LOGIC_VECTOR(1 downto 0);  -- RTI counter from Memory Stage
     
+    -- HLT control signals
+    signal halted : STD_LOGIC := '0';  -- Processor halted flag (only reset clears it)
+    signal hlt_freeze : STD_LOGIC;     -- Freeze signal for PC and pipeline
+    
+    -- External Interrupt control signals
+    signal ext_int_active : STD_LOGIC := '0';           -- External interrupt is active
+    signal ext_int_counter : STD_LOGIC_VECTOR(1 downto 0) := "11";  -- Counter: 00=STORE_PC, 01=DONE, 11=IDLE
+    signal ext_int_load_pc : STD_LOGIC;                 -- Load PC from M[1]
+    signal ext_int_write_pc : STD_LOGIC;                -- Write PC to stack
+    signal ext_int_sp_dec : STD_LOGIC;                  -- Decrement SP
+    signal ext_int_mem_write : STD_LOGIC;               -- Memory write for external interrupt
+    signal ext_int_latched_pc : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');  -- Latched PC
+    
     -- Unified Memory interface signals
     signal fetch_address_signal : STD_LOGIC_VECTOR(31 downto 0);
     signal fetch_data_signal : STD_LOGIC_VECTOR(31 downto 0);
@@ -720,6 +738,13 @@ architecture Structural of Processor_Top is
     signal pc_init_value_signal : STD_LOGIC_VECTOR(31 downto 0);
     signal pc_init_valid_signal : STD_LOGIC;
     signal sp_value_signal : STD_LOGIC_VECTOR(31 downto 0);
+    
+    -- Signals to unified memory (can be overridden by external interrupt)
+    signal unified_mem_address : STD_LOGIC_VECTOR(31 downto 0);
+    signal unified_mem_write_data : STD_LOGIC_VECTOR(31 downto 0);
+    signal unified_mem_read : STD_LOGIC;
+    signal unified_mem_write : STD_LOGIC;
+    signal unified_mem_active : STD_LOGIC;
     
     -- Forwarding Unit signals
     signal forward_a : STD_LOGIC_VECTOR(3 downto 0);
@@ -747,6 +772,88 @@ architecture Structural of Processor_Top is
     signal unused_3bits : STD_LOGIC_VECTOR(2 downto 0) := "000";
     
 begin
+    
+    -- ==================== HLT Control Logic ====================
+    -- When HLT instruction reaches Memory stage, set halted flag
+    -- Only reset can clear the halted flag
+    HLT_Process: process(clk, rst)
+    begin
+        if rst = '1' then
+            halted <= '0';
+        elsif rising_edge(clk) then
+            if exmem_hlt = '1' then
+                halted <= '1';  -- Freeze processor
+            end if;
+            -- Note: halted can only be cleared by reset
+        end if;
+    end process;
+    
+    -- HLT freeze signal: freezes PC and pipeline when halted
+    hlt_freeze <= halted;
+    
+    -- ==================== External Interrupt FSM ====================
+    -- External interrupt handler:
+    -- Counter "11" (IDLE): Wait for interrupt='1' and halted='0'
+    -- Counter "00" (STORE_PC): M[SP] ← PC, SP--
+    -- Counter "01" (LOAD_VECTOR): PC ← M[1], flush pipeline
+    -- Note: Flags are preserved (not saved/restored)
+    
+    Ext_Int_FSM: process(clk, rst)
+    begin
+        if rst = '1' then
+            ext_int_counter <= "11";  -- IDLE state
+            ext_int_active <= '0';
+            ext_int_latched_pc <= (others => '0');
+        elsif rising_edge(clk) then
+            case ext_int_counter is
+                when "11" =>  -- IDLE: Wait for interrupt
+                    if interrupt = '1' and halted = '0' then
+                        ext_int_counter <= "00";  -- Move to STORE_PC
+                        ext_int_active <= '1';
+                        -- Latch current PC (from fetch address)
+                        ext_int_latched_pc <= fetch_address_signal;
+                    end if;
+                    
+                when "00" =>  -- STORE_PC: M[SP] ← PC, SP--
+                    ext_int_counter <= "01";  -- Move to LOAD_VECTOR
+                    
+                when "01" =>  -- LOAD_VECTOR: PC ← M[1]
+                    ext_int_counter <= "11";  -- Return to IDLE
+                    ext_int_active <= '0';
+                    
+                when others =>
+                    ext_int_counter <= "11";  -- Safety: return to IDLE
+                    ext_int_active <= '0';
+            end case;
+        end if;
+    end process;
+    
+    -- External interrupt control signals
+    ext_int_write_pc <= '1' when ext_int_counter = "00" else '0';  -- Write PC to stack
+    ext_int_sp_dec <= '1' when ext_int_counter = "00" else '0';    -- Decrement SP
+    ext_int_load_pc <= '1' when ext_int_counter = "01" else '0';   -- Load PC from M[1]
+    ext_int_mem_write <= '1' when ext_int_counter = "00" else '0'; -- Memory write enable
+    
+    -- ==================== External Interrupt Memory Multiplexing ====================
+    -- Override memory signals when external interrupt is active
+    -- Counter "00": Write PC to M[SP]
+    -- Counter "01": Read M[1] for interrupt vector
+    
+    unified_mem_address <= sp_value_signal when ext_int_counter = "00" else       -- STORE_PC: address = SP
+                           x"00000001" when ext_int_counter = "01" else           -- LOAD_VECTOR: address = 1
+                           mem_stage_address_signal;                              -- Normal operation
+    
+    unified_mem_write_data <= ext_int_latched_pc when ext_int_counter = "00" else -- STORE_PC: data = latched PC
+                              mem_stage_write_data_signal;                        -- Normal operation
+    
+    unified_mem_write <= '1' when ext_int_counter = "00" else                     -- STORE_PC: write enable
+                         mem_stage_write_signal;                                   -- Normal operation
+    
+    unified_mem_read <= '1' when ext_int_counter = "01" else                      -- LOAD_VECTOR: read enable
+                        mem_stage_read_signal;                                     -- Normal operation
+    
+    unified_mem_active <= '1' when ext_int_active = '1' else                      -- External interrupt active
+                          mem_stage_active_signal;                                 -- Normal operation
     
     -- Connect writeback outputs
     wb_write_enable <= memwb_reg_write;
@@ -866,12 +973,13 @@ begin
         port map (
             clk => clk,
             rst => rst,
-            pc_enable => hdu_pc_enable,
-            ifid_enable => hdu_ifid_enable,
-            ifid_flush => hdu_ifid_flush,
+            pc_enable => hdu_pc_enable and not hlt_freeze and not ext_int_active,
+            ifid_enable => hdu_ifid_enable and not hlt_freeze and not ext_int_active,
+            ifid_flush => hdu_ifid_flush or ext_int_active,
             int_load_pc => int_load_pc_internal,
             is_ret => exmem_is_ret,
             rti_load_pc => rti_load_pc_internal,
+            ext_int_load_pc => ext_int_load_pc,
             is_call => exmem_is_call,
             is_conditional_jump => conditional_jump_from_execute,
             is_unconditional_jump => unconditional_branch_from_decode,
@@ -1184,6 +1292,7 @@ begin
             mem_write_enable => mem_stage_write_signal,
             mem_stage_active => mem_stage_active_signal,
             sp_value_out => sp_value_signal,
+            ext_int_sp_dec => ext_int_sp_dec,
             int_load_pc_out => int_load_pc_internal,
             rti_load_pc_out => rti_load_pc_internal,
             rti_load_ccr_out => rti_load_ccr_internal,
@@ -1291,19 +1400,20 @@ begin
     -- ==================== Unified Memory ====================
     -- Handles memory access arbitration between Fetch and Memory stages
     -- Provides PC initialization from memory[0] on reset
+    -- Note: Memory signals can be overridden by external interrupt
     Unified_Mem: Unified_Memory
         port map (
             clk => clk,
             rst => rst,
-            hlt => exmem_hlt,
+            hlt => exmem_hlt or halted,
             fetch_address => fetch_address_signal,
             fetch_data_out => fetch_data_signal,
-            mem_stage_address => mem_stage_address_signal,
-            mem_stage_write_data => mem_stage_write_data_signal,
-            mem_stage_read => mem_stage_read_signal,
-            mem_stage_write => mem_stage_write_signal,
+            mem_stage_address => unified_mem_address,
+            mem_stage_write_data => unified_mem_write_data,
+            mem_stage_read => unified_mem_read,
+            mem_stage_write => unified_mem_write,
             mem_stage_data_out => mem_stage_data_signal,
-            mem_stage_active => mem_stage_active_signal,
+            mem_stage_active => unified_mem_active,
             pc_init_value => pc_init_value_signal,
             pc_init_valid => pc_init_valid_signal
         );
