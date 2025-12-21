@@ -1,19 +1,22 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
--- Return from Interrupt Control Unit (FSM)
+-- Return from Interrupt Control Unit (Counter-based like INT)
 -- Manages multi-cycle RTI instruction execution
 --
--- RTI Instruction Sequence:
--- Cycle 1: CCR ? M[SP] (restore flags)
---          SP ? SP + 1
--- Cycle 2: PC ? M[SP] (restore return address)
---          SP ? SP + 1
+-- RTI Instruction Sequence (reverses INT):
+-- INT stored: M[SP] ← PC+1, SP--, M[SP] ← CCR, SP--
+-- Stack after INT: [SP+2]=PC+1, [SP+1]=CCR, [SP]=empty
 --
--- States:
--- IDLE: Waiting for RTI instruction
--- RESTORE_CCR: Load CCR from stack
--- RESTORE_PC: Load PC from stack
+-- RTI restores:
+-- Counter 0: SP ← SP + 1, CCR ← M[SP]  (restore flags from SP+1)
+-- Counter 1: SP ← SP + 1, PC ← M[SP]   (restore PC from SP+1)
+--
+-- rti_counter values:
+-- "00" = Cycle 0: RESTORE_CCR
+-- "01" = Cycle 1: RESTORE_PC
+-- "11" = Idle/Done
 
 entity RTI_Control_Unit is
     Port (
@@ -27,51 +30,43 @@ entity RTI_Control_Unit is
         rti_load_ccr : out STD_LOGIC;       -- Load CCR from memory
         rti_load_pc : out STD_LOGIC;        -- Load PC from memory
         rti_mem_read : out STD_LOGIC;       -- Memory read enable
-        rti_active : out STD_LOGIC          -- RTI operation in progress
+        rti_active : out STD_LOGIC;         -- RTI operation in progress
+        rti_counter : out STD_LOGIC_VECTOR(1 downto 0)  -- Counter output for hazard unit
     );
 end RTI_Control_Unit;
 
 architecture Behavioral of RTI_Control_Unit is
-    
-    type state_type is (IDLE, RESTORE_CCR, RESTORE_PC);
-    signal current_state, next_state : state_type;
-    
+    signal counter_reg : unsigned(1 downto 0) := "11";  -- Start at IDLE
 begin
     
-    -- State register
+    -- Counter register process
+    -- IMPORTANT: Once started, counter must complete the full sequence
+    -- independently of is_rti signal (which gets flushed by hazard unit)
     process(clk, rst)
     begin
         if rst = '1' then
-            current_state <= IDLE;
+            counter_reg <= "11";  -- IDLE
         elsif rising_edge(clk) then
-            current_state <= next_state;
+            if counter_reg = "11" then
+                -- IDLE state: start sequence only when is_rti is asserted
+                if is_rti = '1' then
+                    counter_reg <= "00";  -- Start at RESTORE_CCR
+                end if;
+            elsif counter_reg = "00" then
+                -- RESTORE_CCR done, go to RESTORE_PC
+                counter_reg <= "01";
+            else
+                -- RESTORE_PC done, go to IDLE
+                counter_reg <= "11";
+            end if;
         end if;
     end process;
     
-    -- Next state logic
-    process(current_state, is_rti)
-    begin
-        case current_state is
-            when IDLE =>
-                if is_rti = '1' then
-                    next_state <= RESTORE_CCR;
-                else
-                    next_state <= IDLE;
-                end if;
-                
-            when RESTORE_CCR =>
-                next_state <= RESTORE_PC;
-                
-            when RESTORE_PC =>
-                next_state <= IDLE;
-                
-            when others =>
-                next_state <= IDLE;
-        end case;
-    end process;
+    -- Output counter value
+    rti_counter <= std_logic_vector(counter_reg);
     
-    -- Output logic
-    process(current_state)
+    -- Output logic based on counter value (combinational)
+    process(counter_reg)
     begin
         -- Default values
         rti_sp_operation <= '0';
@@ -81,28 +76,25 @@ begin
         rti_mem_read <= '0';
         rti_active <= '0';
         
-        case current_state is
-            when IDLE =>
-                -- No operation
-                null;
-                
-            when RESTORE_CCR =>
-                -- CCR ? M[SP], SP ? SP + 1
+        case counter_reg is
+            when "00" =>
+                -- Counter 0: SP ← SP + 1, CCR ← M[SP+1]
+                rti_sp_operation <= '1';    -- SP increment
                 rti_mem_operation <= '1';   -- Use SP + 1 for address
                 rti_load_ccr <= '1';        -- Load CCR from memory
-                rti_sp_operation <= '1';    -- SP increment
                 rti_mem_read <= '1';        -- Memory read
                 rti_active <= '1';
                 
-            when RESTORE_PC =>
-                -- PC ? M[SP], SP ? SP + 1
+            when "01" =>
+                -- Counter 1: SP ← SP + 1, PC ← M[SP+1]
+                rti_sp_operation <= '1';    -- SP increment
                 rti_mem_operation <= '1';   -- Use SP + 1 for address
                 rti_load_pc <= '1';         -- Load PC from memory
-                rti_sp_operation <= '1';    -- SP increment
                 rti_mem_read <= '1';        -- Memory read
                 rti_active <= '1';
                 
             when others =>
+                -- "11" or "10" = IDLE, no operation
                 null;
         end case;
     end process;

@@ -87,7 +87,14 @@ entity Execute_Stage is
         
         -- Direct outputs (not to EX/MEM register)
         conditional_jump       : out STD_LOGIC;  -- OR of all conditional branches
-        pc_plus_2              : out STD_LOGIC_VECTOR(31 downto 0)  -- PC+1+1 for branches
+        pc_plus_2              : out STD_LOGIC_VECTOR(31 downto 0);  -- PC+1+1 for branches
+        
+        -- CCR output for INT instruction (to save flags)
+        ccr_out                : out STD_LOGIC_VECTOR(31 downto 0);
+        
+        -- RTI CCR restore inputs (from Memory stage)
+        rti_load_ccr           : in  STD_LOGIC;                      -- RTI load CCR signal
+        rti_ccr_data           : in  STD_LOGIC_VECTOR(31 downto 0)   -- CCR data from memory stack
     );
 end Execute_Stage;
 
@@ -174,6 +181,7 @@ architecture Behavioral of Execute_Stage is
     signal ccr_from_alu        : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     signal ccr_from_branch     : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     signal ccr_from_stack      : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal ccr_mux_selector    : STD_LOGIC_VECTOR(1 downto 0);  -- CCR mux select (overridden by RTI)
     
     signal cond_branchZ        : STD_LOGIC := '0';
     signal cond_branchC        : STD_LOGIC := '0';
@@ -293,7 +301,8 @@ begin
     end process;
     
     -- Build CCR from stack (Source 10) - for RTI
-    ccr_from_stack <= (others => '0');  -- TODO: Connect to actual stack data when available
+    -- CCR stack input comes from RTI memory read (connected to rti_ccr_data input)
+    ccr_from_stack <= rti_ccr_data;
     
     -- CCR Branch Unit (clears flags after conditional branch)
     ccr_branch_inst: CCR_Branch_Unit
@@ -305,10 +314,13 @@ begin
             ccr_out             => ccr_from_branch
         );
     
+    -- CCR Multiplexer selector: Override to "10" when RTI is loading CCR from stack
+    ccr_mux_selector <= "10" when rti_load_ccr = '1' else id_ex_ccr_in;
+    
     -- CCR Multiplexer (selects which source to write to CCR)
     ccr_mux_unit: CCR_Mux
         port map (
-            selector   => id_ex_ccr_in,
+            selector   => ccr_mux_selector,
             ccr_alu    => ccr_from_alu,
             ccr_branch => ccr_from_branch,
             ccr_stack  => ccr_from_stack,
@@ -320,9 +332,11 @@ begin
     --   - Selector = "00" AND ALU_CCR_Enable = '1' (ALU operations: NOT, INC, ADD, SUB, AND, SETC)
     --   - Selector = "01" (Branch flag clearing: JZ, JC, JN)
     --   - Selector = "10" (Stack restoration: RTI)
+    --   - rti_load_ccr = '1' (RTI restoring CCR from memory)
     ccr_write_enable <= '1' when (id_ex_ccr_in = "00" and alu_ccr_enable = '1') else
                         '1' when (id_ex_ccr_in = "01") else
                         '1' when (id_ex_ccr_in = "10") else
+                        '1' when (rti_load_ccr = '1') else
                         '0';
     
     -- CCR Register
@@ -355,8 +369,8 @@ begin
     -- Conditional jump signal (OR of all conditional branches)
     conditional_jump <= cond_branchZ or cond_branchC or cond_branchN;
     
-    -- PC+2 calculation (PC+1 from ID/EX + 1)
-    pc_plus_2 <=id_ex_pc_plus_1;
+    -- PC+2 calculation (PC+1 from ID/EX + 1, for CALL return address to skip immediate)
+    pc_plus_2 <= std_logic_vector(unsigned(id_ex_pc_plus_1) + 1);
     
     -- Pass-through control signals to EX/MEM Pipeline Register
     ex_mem_rti_phase  <= id_ex_rti_phase;
@@ -395,5 +409,8 @@ begin
     -- Pass-through operand count signals
     ex_mem_has_one_operand <= id_ex_has_one_operand;
     ex_mem_has_two_operands <= id_ex_has_two_operands;
+    
+    -- CCR output for INT instruction (to save current flags)
+    ccr_out <= ccr_register_out;
     
 end Behavioral;

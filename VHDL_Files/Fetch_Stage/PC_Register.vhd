@@ -18,7 +18,10 @@ begin
     process(clk)
     begin
         if rising_edge(clk) then
-            if enable = '1' then
+            if rst = '1' then
+                -- During reset, load PC from pc_in (which comes from memory[0] via PC_Mux)
+                pc_reg <= pc_in;
+            elsif enable = '1' then
                 pc_reg <= pc_in;
             end if;
         end if;
