@@ -1,0 +1,28 @@
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.numeric_std.all;
+
+entity Two_Bits_Dynamic_Prediction is
+    port(
+        clk, rst : in std_logic;
+        ex_is_jumping, ex_is_conditional_jump : in std_logic;
+        State_1 : in std_logic;
+        State_0 : in std_logic;
+        Next_State_1 : out std_logic;
+        Next_State_0 : out std_logic
+    );
+end entity;
+
+architecture a_Two_Bits_Dynamic_Prediction of Two_Bits_Dynamic_Prediction is
+begin
+  process(clk, rst, ex_is_jumping, ex_is_conditional_jump)
+  begin
+    if(rst = '1') then
+        Next_State_1 <= '0';
+        Next_State_0 <= '0';
+    elsif(rising_edge(clk) and ex_is_conditional_jump = '1') then
+        Next_State_1 <= (not ex_is_jumping and (State_1 and State_0)) or (ex_is_jumping and (State_1 or State_0));
+        Next_State_0 <= ex_is_jumping;
+    end if;
+  end process;
+end a_Two_Bits_Dynamic_Prediction
