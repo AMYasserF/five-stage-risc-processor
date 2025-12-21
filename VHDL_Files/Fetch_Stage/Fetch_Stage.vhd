@@ -15,10 +15,11 @@ entity Fetch_Stage is
         
         -- Control Signals to PC_CU
         int_load_pc : in STD_LOGIC;                         -- Load PC from memory
-        is_ret : in STD_LOGIC;                         -- Load PC  return address from memory
-        rti_load_pc : in STD_LOGIC;                      -- Load PC  return address from memory
+        is_ret : in STD_LOGIC;                              -- Load PC return address from memory
+        rti_load_pc : in STD_LOGIC;                         -- Load PC return address from memory
+        ext_int_load_pc : in STD_LOGIC;                     -- External interrupt load PC from M[1]
         is_call : in STD_LOGIC;                             -- Call instruction
-        is_conditional_jump : in STD_LOGIC;                  -- Conditional jump instruction
+        is_conditional_jump : in STD_LOGIC;                 -- Conditional jump instruction
         is_unconditional_jump : in STD_LOGIC;               -- Unconditional jump instruction
 
         --Dynamic Branch Prediction Signals
@@ -33,9 +34,11 @@ entity Fetch_Stage is
         -- ALU/Immediate input
         alu_immediate : in STD_LOGIC_VECTOR(31 downto 0);   -- From ALU (for CALL)
         
-        -- Memory System Interface (to unified memory)
+        -- Memory System Interface (from unified memory)
+        mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);   -- Data from unified memory
+        
+        -- PC output for memory address mux
         pc_out : out STD_LOGIC_VECTOR(31 downto 0);         -- PC to memory address mux
-        mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);   -- Data from memory
         
         -- Outputs to IF/ID Register (at top level)
         instruction_fetch : out STD_LOGIC_VECTOR(31 downto 0);  -- Fetched instruction to IF/ID
@@ -73,14 +76,13 @@ architecture Structural of Fetch_Stage is
         );
     end component;
     
-
-    
     -- Control Unit Components
     component PC_Mux_Control is
     Port (
       
         int_load_pc : in STD_LOGIC;          
         rti_load_pc : in STD_LOGIC;
+        ext_int_load_pc : in STD_LOGIC;
                 
         -- Control signals from main control unit
         is_ret : in std_logic; 
@@ -110,6 +112,12 @@ architecture Structural of Fetch_Stage is
     
 begin
     -- ==================== PC Path ====================
+    -- Reset flow:
+    -- 1. During rst='1': pc_out=0 -> memory reads address 0 -> returns program start (e.g., 2)
+    -- 2. PC_Mux_Control selects "10" (mem_data) during reset
+    -- 3. PC_Mux outputs mem_read_data (value 2) as pc_next
+    -- 4. PC_Register loads pc_next on rising edge while rst='1'
+    -- 5. After rst releases: PC outputs the loaded value (2), fetching starts from there
     
     -- PC Register
     PC_Reg: PC_Register
@@ -130,12 +138,11 @@ begin
         );
     
     -- PC Mux Control Unit
-    -- Receives control signals from INT_CU, RET_CU, and main CU
-    -- Selects appropriate PC source
     PC_Mux_Ctrl: PC_Mux_Control
         port map (
             int_load_pc => int_load_pc,
             rti_load_pc => rti_load_pc,
+            ext_int_load_pc => ext_int_load_pc,
             is_call => is_call,
             is_conditional_jump => is_conditional_jump,
             is_ret => is_ret,
@@ -160,10 +167,10 @@ begin
     
     -- ==================== Memory System Interface ====================
     -- Output PC to unified memory system
-    -- The Memory_Address_Mux will decide when to use PC vs other addresses
-    pc_out <= pc_current;
+    -- During reset, output 0 to read program start address from memory[0]
+    pc_out <= (others => '0') when rst = '1' else pc_current;
     
-    -- ==================== Outputs to IF/ID (instantiated at top level) ====================
+    -- ==================== Outputs to IF/ID ====================
     instruction_fetch <= mem_read_data;        -- Instruction from unified memory
     pc_plus_1_fetch <= pc_incremented;         -- PC + 1 for next instruction
     

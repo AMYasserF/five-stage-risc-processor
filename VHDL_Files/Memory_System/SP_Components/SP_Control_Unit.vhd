@@ -22,6 +22,7 @@ entity SP_Control_Unit is
         is_ret : in STD_LOGIC;       -- RET instruction
         int_sp_operation : in STD_LOGIC;  -- INT operation (from interrupt control unit)
         rti_sp_operation : in STD_LOGIC;  -- RTI operation (from RTI control unit)
+        ext_int_sp_dec : in STD_LOGIC;    -- External interrupt decrement SP
         rst : in STD_LOGIC;          -- Reset signal
         
         -- Output
@@ -33,15 +34,15 @@ end SP_Control_Unit;
 architecture Behavioral of SP_Control_Unit is
 begin
     
-    process(is_call, is_push, is_pop, is_ret, int_sp_operation, rti_sp_operation, rst)
+    process(is_call, is_push, is_pop, is_ret, int_sp_operation, rti_sp_operation, ext_int_sp_dec, rst)
     begin
         if rst = '1' then
             sp_mux_sel <= '0';
             sp_enable <= '0';
         else
             -- Determine if any SP-modifying operation is active
-            if is_call = '1' or is_push = '1' or int_sp_operation = '1' then
-                -- SP - 1 operations
+            if is_call = '1' or is_push = '1' or int_sp_operation = '1' or ext_int_sp_dec = '1' then
+                -- SP - 1 operations (including external interrupt)
                 sp_mux_sel <= '1';
                 sp_enable <= '1';
             elsif is_pop = '1' or is_ret = '1' or rti_sp_operation = '1' then

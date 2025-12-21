@@ -2,7 +2,8 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
--- Simple testbench for complete 5-stage processor
+-- Testbench for complete 5-stage processor with unified internal memory
+-- Tests: CALL, RET, External Interrupt, and HLT instructions
 entity Processor_Top_TB is
 end Processor_Top_TB;
 
@@ -12,8 +13,7 @@ architecture Behavioral of Processor_Top_TB is
         Port (
             clk : in STD_LOGIC;
             rst : in STD_LOGIC;
-            mem_address : out STD_LOGIC_VECTOR(31 downto 0);
-            mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);
+            interrupt : in STD_LOGIC;
             input_port : in STD_LOGIC_VECTOR(31 downto 0);
             output_port : out STD_LOGIC_VECTOR(31 downto 0);
             wb_write_enable : out STD_LOGIC;
@@ -48,9 +48,7 @@ architecture Behavioral of Processor_Top_TB is
     -- Testbench signals
     signal clk : STD_LOGIC := '0';
     signal rst : STD_LOGIC := '1';
-    
-    signal mem_address : STD_LOGIC_VECTOR(31 downto 0);
-    signal mem_read_data : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+    signal interrupt : STD_LOGIC := '0';
     
     signal input_port : STD_LOGIC_VECTOR(31 downto 0) := X"DEADBEEF";
     signal output_port : STD_LOGIC_VECTOR(31 downto 0);
@@ -213,13 +211,12 @@ architecture Behavioral of Processor_Top_TB is
     
 begin
     
-    -- Instantiate processor
+    -- Instantiate processor (memory is now internal)
     UUT: Processor_Top
         port map (
             clk => clk,
             rst => rst,
-            mem_address => mem_address,
-            mem_read_data => mem_read_data,
+            interrupt => interrupt,
             input_port => input_port,
             output_port => output_port,
             wb_write_enable => wb_write_enable,
@@ -259,24 +256,136 @@ begin
         wait for clk_period/2;
     end process;
     
-    -- Instruction memory read (use 7 bits to support addresses 0-127)
-    mem_read_data <= instruction_memory(to_integer(unsigned(mem_address(6 downto 0))));
-    
     -- Stimulus
     stimulus: process
     begin
-        -- Hold reset for 2 cycles
+        -- ========== Test 1: Reset and Initialization ==========
+        report "========================================" severity note;
+        report "TEST 1: Reset and Initialization" severity note;
+        report "========================================" severity note;
+        
         rst <= '1';
+        interrupt <= '0';
+        wait for clk_period * 3;
+        
+        rst <= '0';
+        report "Reset released - processor starts from M[0]" severity note;
+        
+        -- Run program for a while
+        wait for clk_period * 30;
+        
+        -- ========== Test 2: External Interrupt ==========
+        report " " severity note;
+        report "========================================" severity note;
+        report "TEST 2: External Interrupt Signal" severity note;
+        report "========================================" severity note;
+        report "Asserting external interrupt signal..." severity note;
+        
+        -- Assert interrupt
+        interrupt <= '1';
         wait for clk_period * 2;
         
-        -- Release reset
-        rst <= '0';
+        -- Deassert interrupt
+        interrupt <= '0';
+        report "Interrupt deasserted - handler should execute" severity note;
+        report "Expected: PC saved to stack, jump to M[1]" severity note;
         
-        -- Run for 250 cycles to allow SWAP test to complete
-        wait for clk_period * 700;
+        -- Let interrupt handler execute and return
+        wait for clk_period * 25;
         
-        -- Stop simulation
+        -- ========== Test 3: Another interrupt ==========
+        report " " severity note;
+        report "========================================" severity note;
+        report "TEST 3: Second External Interrupt" severity note;
+        report "========================================" severity note;
+        
+        interrupt <= '1';
+        wait for clk_period;
+        interrupt <= '0';
+        
+        wait for clk_period * 20;
+        
+        -- ========== Test 4: Check for HLT ==========
+        report " " severity note;
+        report "========================================" severity note;
+        report "TEST 4: Monitor for HLT Instruction" severity note;
+        report "========================================" severity note;
+        report "Running until HLT or end of test..." severity note;
+        
+        -- Run for more cycles to potentially hit HLT
+        wait for clk_period * 40;
+        
+        if ex_mem_hlt = '1' then
+            report "HLT detected - processor should be frozen" severity note;
+            
+            -- Verify processor stays halted
+            wait for clk_period * 5;
+            report "Verifying processor remains halted..." severity note;
+            
+            -- ========== Test 5: Reset after HLT ==========
+            report " " severity note;
+            report "========================================" severity note;
+            report "TEST 5: Reset After HLT" severity note;
+            report "========================================" severity note;
+            
+            rst <= '1';
+            wait for clk_period * 2;
+            rst <= '0';
+            report "Reset applied - processor should restart" severity note;
+            
+            wait for clk_period * 20;
+        else
+            report "HLT not reached in this test run" severity note;
+        end if;
+        
+        -- ========== Test Complete ==========
+        report " " severity note;
+        report "========================================" severity note;
+        report "ALL TESTS COMPLETED" severity note;
+        report "========================================" severity note;
+        report "Check waveforms for:" severity note;
+        report "1. External interrupt saves PC to stack" severity note;
+        report "2. Interrupt handler execution" severity note;
+        report "3. Return from interrupt (RET)" severity note;
+        report "4. HLT instruction freezes processor" severity note;
+        report "5. Reset clears HLT state" severity note;
+        
         wait;
+    end process;
+    
+    -- Monitor process
+    monitor: process(clk)
+    begin
+        if rising_edge(clk) then
+            -- Monitor output port
+            if ex_mem_out_enable = '1' then
+                report "OUTPUT: " & integer'image(to_integer(unsigned(ex_mem_alu_result))) severity note;
+            end if;
+            
+            -- Monitor HLT
+            if ex_mem_hlt = '1' then
+                report ">>> HLT instruction detected in EX/MEM stage <<<" severity warning;
+            end if;
+            
+            -- Monitor interrupt-related signals
+            if ex_mem_is_int = '1' then
+                report "INT instruction in EX/MEM stage" severity note;
+            end if;
+            
+            if ex_mem_is_rti = '1' then
+                report "RTI instruction in EX/MEM stage" severity note;
+            end if;
+            
+            if ex_mem_is_ret = '1' then
+                report "RET instruction in EX/MEM stage" severity note;
+            end if;
+            
+            -- Monitor register writes
+            if wb_write_enable = '1' then
+                report "Register R" & integer'image(to_integer(unsigned(wb_write_reg))) & 
+                       " <= " & integer'image(to_integer(unsigned(wb_write_data))) severity note;
+            end if;
+        end if;
     end process;
     
 end Behavioral;

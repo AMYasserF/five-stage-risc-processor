@@ -2,7 +2,8 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
--- Memory Stage with Integrated Memory System
+-- Memory Stage with External Memory Interface
+-- Memory is now unified at top level - this stage generates addresses and data
 -- Includes: SP management, Memory Address/Write Data muxing, INT/RTI FSMs
 
 entity Memory_Stage is
@@ -35,13 +36,35 @@ entity Memory_Stage is
         rsrc1 : in STD_LOGIC_VECTOR(2 downto 0);
         rsrc2_data : in STD_LOGIC_VECTOR(31 downto 0);
         alu_result : in STD_LOGIC_VECTOR(31 downto 0);
-        pc_data : in STD_LOGIC_VECTOR(31 downto 0);       -- PC from ID/EX
-        ccr_data : in STD_LOGIC_VECTOR(31 downto 0);      -- CCR register
+        pc_data : in STD_LOGIC_VECTOR(31 downto 0);           -- PC+1 from EX/MEM pipeline (for INT)
+        call_return_addr : in STD_LOGIC_VECTOR(31 downto 0); -- Return address for CALL (from ID/EX PC+1)
+        ccr_data : in STD_LOGIC_VECTOR(31 downto 0);          -- CCR register
         input_port_data : in STD_LOGIC_VECTOR(31 downto 0);
+        
+        -- Memory interface (to unified memory at top level)
+        mem_read_data : in STD_LOGIC_VECTOR(31 downto 0);  -- Data from unified memory
+        mem_address_out : out STD_LOGIC_VECTOR(31 downto 0);  -- Address to unified memory
+        mem_write_data_out : out STD_LOGIC_VECTOR(31 downto 0);  -- Data to write to memory
+        mem_read_enable : out STD_LOGIC;  -- Memory read enable
+        mem_write_enable : out STD_LOGIC; -- Memory write enable
+        mem_stage_active : out STD_LOGIC;     -- Memory stage is using memory
+        
+        -- SP value output (for RET to read from stack)
+        sp_value_out : out STD_LOGIC_VECTOR(31 downto 0);
+        
+        -- External Interrupt control signals
+        ext_int_sp_dec : in STD_LOGIC;        -- External interrupt decrement SP
         
         -- Outputs to Fetch Stage (PC control)
         int_load_pc_out : out STD_LOGIC;
         rti_load_pc_out : out STD_LOGIC;
+        
+        -- Outputs to CCR (for RTI flag restore)
+        rti_load_ccr_out : out STD_LOGIC;
+        
+        -- Outputs to Hazard Detection Unit
+        int_counter_out : out STD_LOGIC_VECTOR(1 downto 0);
+        rti_counter_out : out STD_LOGIC_VECTOR(1 downto 0);
         
         -- Outputs to MEM/WB pipeline register
         is_ret_out : out STD_LOGIC;
@@ -106,6 +129,7 @@ architecture Structural of Memory_Stage is
             is_ret : in STD_LOGIC;
             int_sp_operation : in STD_LOGIC;
             rti_sp_operation : in STD_LOGIC;
+            ext_int_sp_dec : in STD_LOGIC;
             rst : in STD_LOGIC;
             sp_mux_sel : out STD_LOGIC;
             sp_enable : out STD_LOGIC
@@ -136,6 +160,8 @@ architecture Structural of Memory_Stage is
         Port (
             rst : in STD_LOGIC;
             int_mem_operation : in STD_LOGIC;
+            int_write_pc : in STD_LOGIC;
+            int_write_ccr : in STD_LOGIC;
             is_push : in STD_LOGIC;
             is_call : in STD_LOGIC;
             is_pop : in STD_LOGIC;
@@ -149,9 +175,11 @@ architecture Structural of Memory_Stage is
     component Memory_Write_Data_Mux is
         Port (
             pc_data : in STD_LOGIC_VECTOR(31 downto 0);
+            call_return_addr : in STD_LOGIC_VECTOR(31 downto 0);
             rsrc2_data : in STD_LOGIC_VECTOR(31 downto 0);
             ccr_data : in STD_LOGIC_VECTOR(31 downto 0);
             alu_result : in STD_LOGIC_VECTOR(31 downto 0);
+            is_call : in STD_LOGIC;
             sel : in STD_LOGIC_VECTOR(1 downto 0);
             mem_write_data : out STD_LOGIC_VECTOR(31 downto 0)
         );
@@ -174,6 +202,8 @@ architecture Structural of Memory_Stage is
             clk : in STD_LOGIC;
             rst : in STD_LOGIC;
             is_int : in STD_LOGIC;
+            pc_plus_1_in : in STD_LOGIC_VECTOR(31 downto 0);
+            ccr_in : in STD_LOGIC_VECTOR(31 downto 0);
             int_mem_operation : out STD_LOGIC;
             int_sp_operation : out STD_LOGIC;
             int_write_pc : out STD_LOGIC;
@@ -181,7 +211,10 @@ architecture Structural of Memory_Stage is
             int_load_pc : out STD_LOGIC;
             int_mem_write : out STD_LOGIC;
             int_mem_read : out STD_LOGIC;
-            int_active : out STD_LOGIC
+            int_active : out STD_LOGIC;
+            int_counter : out STD_LOGIC_VECTOR(1 downto 0);
+            latched_pc_plus_1 : out STD_LOGIC_VECTOR(31 downto 0);
+            latched_ccr : out STD_LOGIC_VECTOR(31 downto 0)
         );
     end component;
     
@@ -195,21 +228,12 @@ architecture Structural of Memory_Stage is
             rti_load_ccr : out STD_LOGIC;
             rti_load_pc : out STD_LOGIC;
             rti_mem_read : out STD_LOGIC;
-            rti_active : out STD_LOGIC
+            rti_active : out STD_LOGIC;
+            rti_counter : out STD_LOGIC_VECTOR(1 downto 0)
         );
     end component;
     
-    component Memory is
-        Port (
-            clk : in STD_LOGIC;
-            mem_read : in STD_LOGIC;
-            mem_write : in STD_LOGIC;
-            hlt : in STD_LOGIC;
-            address : in STD_LOGIC_VECTOR(17 downto 0);
-            write_data : in STD_LOGIC_VECTOR(31 downto 0);
-            read_data : out STD_LOGIC_VECTOR(31 downto 0)
-        );
-    end component;
+    -- Note: Memory component removed - now at top level as Unified_Memory
     
     -- Internal Signals
     -- SP signals
@@ -229,6 +253,11 @@ architecture Structural of Memory_Stage is
     signal int_mem_write : STD_LOGIC;
     signal int_mem_read : STD_LOGIC;
     signal int_active : STD_LOGIC;
+    signal int_counter : STD_LOGIC_VECTOR(1 downto 0);
+    
+    -- Latched INT values (saved when INT first arrives, before pipeline flush)
+    signal int_latched_pc_plus_1 : STD_LOGIC_VECTOR(31 downto 0);
+    signal int_latched_ccr : STD_LOGIC_VECTOR(31 downto 0);
     
     signal rti_sp_operation : STD_LOGIC;
     signal rti_mem_operation : STD_LOGIC;
@@ -236,13 +265,14 @@ architecture Structural of Memory_Stage is
     signal rti_load_pc : STD_LOGIC;
     signal rti_mem_read : STD_LOGIC;
     signal rti_active : STD_LOGIC;
+    signal rti_counter : STD_LOGIC_VECTOR(1 downto 0);
     
     -- Memory address signals
     signal alu_plus_2 : STD_LOGIC_VECTOR(31 downto 0);
     signal mem_address : STD_LOGIC_VECTOR(31 downto 0);
     signal mem_addr_mux_sel : STD_LOGIC_VECTOR(2 downto 0);
     signal reset_address : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
-    signal pc_address : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');  -- TODO: Connect to PC
+    signal pc_address : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
     
     -- Memory write data signals
     signal mem_write_data : STD_LOGIC_VECTOR(31 downto 0);
@@ -251,7 +281,7 @@ architecture Structural of Memory_Stage is
     -- Memory control signals
     signal actual_mem_write : STD_LOGIC;
     signal actual_mem_read : STD_LOGIC;
-    signal mem_read_data : STD_LOGIC_VECTOR(31 downto 0);
+    -- Note: mem_read_data now comes from entity port
     
 begin
     
@@ -288,6 +318,7 @@ begin
             is_ret => is_ret,
             int_sp_operation => int_sp_operation,
             rti_sp_operation => rti_sp_operation,
+            ext_int_sp_dec => ext_int_sp_dec,
             rst => rst,
             sp_mux_sel => sp_mux_sel,
             sp_enable => sp_enable
@@ -299,6 +330,8 @@ begin
             clk => clk,
             rst => rst,
             is_int => is_int,
+            pc_plus_1_in => call_return_addr,  -- PC+1 from ID/EX (to latch) - same as CALL
+            ccr_in => ccr_data,       -- CCR from EX/MEM (to latch)
             int_mem_operation => int_mem_operation,
             int_sp_operation => int_sp_operation,
             int_write_pc => int_write_pc,
@@ -306,8 +339,14 @@ begin
             int_load_pc => int_load_pc,
             int_mem_write => int_mem_write,
             int_mem_read => int_mem_read,
-            int_active => int_active
+            int_active => int_active,
+            int_counter => int_counter,
+            latched_pc_plus_1 => int_latched_pc_plus_1,
+            latched_ccr => int_latched_ccr
         );
+    
+    -- Output int_counter to Hazard Detection Unit
+    int_counter_out <= int_counter;
     
     RTI_CU: RTI_Control_Unit
         port map (
@@ -319,8 +358,15 @@ begin
             rti_load_ccr => rti_load_ccr,
             rti_load_pc => rti_load_pc,
             rti_mem_read => rti_mem_read,
-            rti_active => rti_active
+            rti_active => rti_active,
+            rti_counter => rti_counter
         );
+    
+    -- Output rti_counter to Hazard Detection Unit
+    rti_counter_out <= rti_counter;
+    
+    -- Output rti_load_ccr to CCR Register (for flag restore)
+    rti_load_ccr_out <= rti_load_ccr;
     
     -- ==================== Memory Address System ====================
     ALU_Add_2: ALU_Plus_2_Adder
@@ -345,6 +391,8 @@ begin
         port map (
             rst => rst,
             int_mem_operation => int_mem_operation,
+            int_write_pc => int_write_pc,
+            int_write_ccr => int_write_ccr,
             is_push => is_push,
             is_call => is_call,
             is_pop => is_pop,
@@ -355,12 +403,15 @@ begin
         );
     
     -- ==================== Memory Write Data System ====================
+    -- Use latched values for INT (since pipeline will be flushed)
     Mem_Write_Mux: Memory_Write_Data_Mux
         port map (
-            pc_data => pc_data,
+            pc_data => int_latched_pc_plus_1,  -- Use latched PC+1 for INT
+            call_return_addr => call_return_addr,
             rsrc2_data => rsrc2_data,
-            ccr_data => ccr_data,
+            ccr_data => int_latched_ccr,       -- Use latched CCR for INT
             alu_result => alu_result,
+            is_call => is_call,
             sel => mem_write_data_sel,
             mem_write_data => mem_write_data
         );
@@ -376,21 +427,22 @@ begin
             mem_write_data_sel => mem_write_data_sel
         );
     
-    -- ==================== Memory ====================
+    -- ==================== Memory Interface (to Unified Memory at top level) ====================
     -- Combine memory control signals
     actual_mem_write <= mem_write or int_mem_write;
     actual_mem_read <= mem_read or int_mem_read or rti_mem_read;
     
-    Mem: Memory
-        port map (
-            clk => clk,
-            mem_read => actual_mem_read,
-            mem_write => actual_mem_write,
-            hlt => hlt,
-            address => mem_address(17 downto 0),
-            write_data => mem_write_data,
-            read_data => mem_read_data
-        );
+    -- Output memory interface signals to unified memory
+    mem_address_out <= mem_address;
+    mem_write_data_out <= mem_write_data;
+    mem_read_enable <= actual_mem_read;
+    mem_write_enable <= actual_mem_write;
+    
+    -- Memory stage is active when doing any memory operation
+    mem_stage_active <= actual_mem_read or actual_mem_write or is_call or is_ret or is_push or is_pop;
+    
+    -- SP value output for RET instruction
+    sp_value_out <= sp_current;
     
     -- ==================== Outputs ====================
     -- Pass through control signals to MEM/WB
@@ -415,7 +467,7 @@ begin
     rsrc1_out <= rsrc1;
     rsrc2_data_out <= rsrc2_data;
     alu_result_out <= alu_result;
-    mem_data_out <= mem_read_data;
+    mem_data_out <= mem_read_data;  -- Data comes from unified memory input port
     input_port_data_out <= input_port_data;
     
     -- PC control outputs to Fetch Stage

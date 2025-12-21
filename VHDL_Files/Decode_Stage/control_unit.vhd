@@ -180,10 +180,12 @@ begin
                             alu_op <= "0000";
                         when "0101" =>  -- CALL (hasImm=1)
                             is_call <= '1';
-                            alu_op <= "0000";
+                            alu_op <= "0011";
+                            mem_write <= '1';
                         when "0110" =>  -- RET (hasImm=0)
                             is_ret <= '1';
                             alu_op <= "0000";
+                            mem_read <='1';
                         when others =>
                             alu_op <= "0000";  -- Default NOP
                     end case;
