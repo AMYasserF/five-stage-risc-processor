@@ -1,5 +1,6 @@
 
 # Five-Stage RISC Processor Design
+![System Design](docs/design.svg)
 
 ## 📌 Project Overview
 
